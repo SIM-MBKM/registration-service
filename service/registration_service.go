@@ -32,12 +32,12 @@ type RegistrationService interface {
 	GetUsersData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, baseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
 		registrationRepository:    registrationRepository,
 		documentRepository:        documentRepository,
-		userManagementService:     NewUserManagementService(baseURI, asyncURIs),
-		activityManagementService: NewActivityManagementService(baseURI, asyncURIs),
+		userManagementService:     NewUserManagementService(userManagementbaseURI, asyncURIs),
+		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
 	}
 }

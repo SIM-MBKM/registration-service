@@ -1,0 +1,60 @@
+//go:build wireinject
+// +build wireinject
+
+package main
+
+import (
+	"registration-service/config"
+	"registration-service/controller"
+	"registration-service/repository"
+	"registration-service/service"
+
+	storageService "github.com/SIM-MBKM/filestorage/storage"
+	"github.com/google/wire"
+	"gorm.io/gorm"
+)
+
+func ProvideRegistrationRepository(db *gorm.DB) repository.RegistrationRepository {
+	return repository.NewRegistrationRepository(db)
+}
+
+func ProvideDocumentRepository(db *gorm.DB) repository.DocumentRepository {
+	return repository.NewDocumentRepository(db)
+}
+
+func ProvideRegistrationService(
+	registrationRepository repository.RegistrationRepository,
+	documentRepository repository.DocumentRepository,
+	secretKey config.SecretKey,
+	userManagementbaseURI config.UserManagementbaseURI,
+	activityManagementbaseURI config.ActivityManagementbaseURI,
+	asyncURIs config.AsyncURIs,
+	config *storageService.Config,
+	tokenManager *storageService.CacheTokenManager,
+) service.RegistrationService {
+	return service.NewRegistrationService(registrationRepository, documentRepository, string(secretKey), string(userManagementbaseURI), string(activityManagementbaseURI), []string(asyncURIs), config, tokenManager)
+}
+
+func ProvideRegistrationController(registrationService service.RegistrationService) controller.RegistrationController {
+	return controller.NewRegistrationController(registrationService)
+}
+
+var RegistrationSet = wire.NewSet(
+	ProvideRegistrationRepository,
+	ProvideDocumentRepository,
+	ProvideRegistrationService,
+	ProvideRegistrationController,
+)
+
+func InitializeRegistration(
+	db *gorm.DB,
+	secretKey config.SecretKey,
+	userManagementbaseURI config.UserManagementbaseURI,
+	activityManagementbaseURI config.ActivityManagementbaseURI,
+	asyncURIs config.AsyncURIs,
+	config *storageService.Config,
+	tokenManager *storageService.CacheTokenManager,
+) (controller.RegistrationController, error) {
+	wire.Build(RegistrationSet)
+	return nil, nil
+}

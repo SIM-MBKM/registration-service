@@ -10,6 +10,14 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+func CloseDatabaseConnection(db *gorm.DB) {
+	dbSQL, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+	dbSQL.Close()
+}
+
 func SetupDatabaseConnection() *gorm.DB {
 	if os.Getenv("APP_ENV") != "production" {
 		err := godotenv.Load(".env")
@@ -37,12 +45,4 @@ func SetupDatabaseConnection() *gorm.DB {
 	}
 
 	return db
-}
-
-func CloseDatabaseConnection(db *gorm.DB) {
-	dbSQL, err := db.DB()
-	if err != nil {
-		panic(err)
-	}
-	dbSQL.Close()
 }

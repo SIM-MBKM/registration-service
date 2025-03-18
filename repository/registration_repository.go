@@ -24,8 +24,8 @@ type RegistrationRepository interface {
 	FindTotal(ctx context.Context, tx *gorm.DB) (int64, error)
 }
 
-func NewRegistrationRepository(db *gorm.DB, baseRepository BaseRepository) RegistrationRepository {
-	return &registrationRepository{db: db, baseRepository: baseRepository}
+func NewRegistrationRepository(db *gorm.DB) RegistrationRepository {
+	return &registrationRepository{db: db, baseRepository: NewBaseRepository(db)}
 }
 
 func (r *registrationRepository) FindTotal(ctx context.Context, tx *gorm.DB) (int64, error) {
