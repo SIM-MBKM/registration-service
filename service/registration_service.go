@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"mime/multipart"
 	"reflect"
 	"registration-service/dto"
 	"registration-service/entity"
 	"registration-service/helper"
 	"registration-service/repository"
 
+	storageService "github.com/SIM-MBKM/filestorage/storage"
 	"gorm.io/gorm"
 )
 
@@ -16,23 +18,25 @@ type registrationService struct {
 	registrationRepository    repository.RegistrationRepository
 	userManagementService     *UserManagementService
 	activityManagementService *ActivityManagementService
+	fileService               *FileService
 }
 
 type RegistrationService interface {
 	FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	FindRegistrationByID(ctx context.Context, id string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
-	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, tx *gorm.DB, token string) error
+	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, tx *gorm.DB, token string) error
 	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error
 	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
 	GetActivitiesData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
 	GetUsersData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, secretKey string, baseURI string, asyncURIs []string) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, secretKey string, baseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
 		registrationRepository:    registrationRepository,
 		userManagementService:     NewUserManagementService(baseURI, asyncURIs),
 		activityManagementService: NewActivityManagementService(baseURI, asyncURIs),
+		fileService:               NewFileService(config, tokenManager),
 	}
 }
 
@@ -140,7 +144,7 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 	return response, nil
 }
 
-func (s *registrationService) CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, tx *gorm.DB, token string) error {
+func (s *registrationService) CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, tx *gorm.DB, token string) error {
 	var registrationEntity entity.Registration
 	var activitiesData []map[string]interface{}
 	var usersData []map[string]interface{}
@@ -159,6 +163,12 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 
 	if len(activitiesData) == 0 || len(usersData) == 0 {
 		return errors.New("data not found")
+	}
+
+	// upload file
+	_, err := s.fileService.storage.GcsUpload(file, "sim_mbkm", "", "")
+	if err != nil {
+		return errors.New("failed to upload file")
 	}
 
 	loValidation := "Pending"
@@ -181,7 +191,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		TotalSKS:                  registration.TotalSKS,
 	}
 
-	_, err := s.registrationRepository.Create(ctx, registrationEntity, tx)
+	_, err = s.registrationRepository.Create(ctx, registrationEntity, tx)
 	if err != nil {
 		return err
 	}
