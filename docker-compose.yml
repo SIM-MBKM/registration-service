@@ -1,0 +1,63 @@
+services:
+  # postgres:
+  #   hostname: postgres
+  #   image: postgres:latest
+  #   ports: 
+  #     - ${DB_PORT}:5432
+  #   environment:
+  #     - POSTGRES_USER=${DB_USER}
+  #     - POSTGRES_PASSWORD=${DB_PASS}
+  #     - POSTGRES_DB=${DB_NAME}
+  #   volumes:
+  #     - app-volumes:/var/lib/postgresql/data
+  #     - ./volumes/postgres:/var/lib/postgresql/data
+  #     - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+  #   networks:
+  #     - sim-mbkm-networks
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  app: 
+    hostname: app
+    container_name: activity-management-service
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - ${GOLANG_PORT}:8888
+    restart: always
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    volumes:
+      - ./:/app
+    networks:
+      - sim-mbkm-networks
+    env_file:
+      - .env
+
+  nginx: 
+    image: nginx:alpine
+    ports:
+      - 8081:80
+      - 8443:443
+    depends_on:
+      - app
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./storage/:/app/storage/
+      - ./static/:/app/static/
+      - ./docker/nginx/:/etc/nginx/conf.d
+    networks:
+      - sim-mbkm-networks
+
+volumes:
+  app-volumes:
+
+networks:
+  sim-mbkm-networks:
+    driver: bridge

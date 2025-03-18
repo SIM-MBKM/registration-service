@@ -1,0 +1,69 @@
+package dto
+
+const (
+	MESSAGE_REGISTRATION_GET_ALL_SUCCESS = "Get all activities success"
+	MESSAGE_REGISTRATION_GET_SUCCESS     = "Get registration success"
+	MESSAGE_REGISTRATION_CREATE_SUCCESS  = "Create registration success"
+	MESSAGE_REGISTRATION_UPDATE_SUCCESS  = "Update registration success"
+	MESSAGE_REGISTRATION_DELETE_SUCCESS  = "Delete registration success"
+)
+
+type (
+	GetRegistrationResponse struct {
+		ID                        string             `json:"id"`
+		ActivityID                string             `json:"activity_id"`
+		UserID                    string             `json:"user_id"`
+		UserNRP                   string             `json:"user_nrp"`
+		UserName                  string             `json:"user_name"`
+		AdvisingConfirmation      bool               `json:"advising_confirmation"`
+		AcademicAdvisor           string             `json:"academic_advisor"`
+		AcademicAdvisorEmail      string             `json:"academic_advisor_email"`
+		MentorName                string             `json:"mentor_name"`
+		MentorEmail               string             `json:"mentor_email"`
+		LOValidation              string             `json:"lo_validation"`
+		AcademicAdvisorValidation string             `json:"academic_advisor_validation"`
+		Semester                  string             `json:"semester"`
+		TotalSKS                  int                `json:"total_sks"`
+		ActivityName              string             `json:"activity_name"`
+		Documents                 []DocumentResponse `json:"documents"`
+	}
+
+	FilterRegistrationRequest struct {
+		ActivityName    string `json:"activity_name"`
+		UserName        string `json:"user_name"`
+		UserNRP         string `json:"user_nrp"`
+		AcademicAdvisor string `json:"academic_advisor"`
+		ApprovalStatus  bool   `json:"approval_status"`
+	}
+
+	FilterDataRequest struct {
+		ActivityID      []string `json:"activity_id"`
+		UserID          []string `json:"user_id"`
+		AcademicAdvisor string   `json:"academic_advisor"`
+		ApprovalStatus  bool     `json:"approval_status"`
+	}
+
+	CreateRegistrationRequest struct {
+		ActivityID           string `json:"activity_id" binding:"required"`
+		UserID               string `json:"user_id" binding:"required"`
+		AdvisingConfirmation bool   `json:"advising_confirmation" binding:"required"`
+		AcademicAdvisor      string `json:"academic_advisor" binding:"required"`
+		AcademicAdvisorEmail string `json:"academic_advisor_email" binding:"required"`
+		MentorName           string `json:"mentor_name" binding:"required"`
+		MentorEmail          string `json:"mentor_email" binding:"required"`
+		Semester             string `json:"semester" binding:"required"`
+		TotalSKS             int    `json:"total_sks" binding:"required"`
+	}
+
+	UpdateRegistrationDataRequest struct {
+		ActivityID           string `json:"activity_id" binding:"required"`
+		UserID               string `json:"user_id" binding:"required"`
+		AdvisingConfirmation bool   `json:"advising_confirmation" binding:"required"`
+		AcademicAdvisor      string `json:"academic_advisor" binding:"required"`
+		AcademicAdvisorEmail string `json:"academic_advisor_email" binding:"required"`
+		MentorName           string `json:"mentor_name" binding:"required"`
+		MentorEmail          string `json:"mentor_email" binding:"required"`
+		Semester             string `json:"semester" binding:"required"`
+		TotalSKS             int    `json:"total_sks" binding:"required"`
+	}
+)
