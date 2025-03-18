@@ -16,6 +16,7 @@ import (
 
 type registrationService struct {
 	registrationRepository    repository.RegistrationRepository
+	documentRepository        repository.DocumentRepository
 	userManagementService     *UserManagementService
 	activityManagementService *ActivityManagementService
 	fileService               *FileService
@@ -31,9 +32,10 @@ type RegistrationService interface {
 	GetUsersData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, secretKey string, baseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, baseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
 		registrationRepository:    registrationRepository,
+		documentRepository:        documentRepository,
 		userManagementService:     NewUserManagementService(baseURI, asyncURIs),
 		activityManagementService: NewActivityManagementService(baseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
@@ -166,7 +168,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	// upload file
-	_, err := s.fileService.storage.GcsUpload(file, "sim_mbkm", "", "")
+	result, err := s.fileService.storage.GcsUpload(file, "sim_mbkm", "", "")
 	if err != nil {
 		return errors.New("failed to upload file")
 	}
@@ -192,6 +194,19 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	_, err = s.registrationRepository.Create(ctx, registrationEntity, tx)
+	if err != nil {
+		return err
+	}
+
+	// Create document entity
+	documentEntity := entity.Document{
+		RegistrationID: registrationEntity.ID.String(),
+		Name:           file.Filename,
+		FileStorageID:  result.FileID,
+		DocumentType:   "Acceptence Letter",
+	}
+
+	_, err = s.documentRepository.Create(ctx, documentEntity, tx)
 	if err != nil {
 		return err
 	}
