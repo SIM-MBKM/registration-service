@@ -15,12 +15,12 @@ type registrationRepository struct {
 }
 
 type RegistrationRepository interface {
-	Index(ctx context.Context, tx *gorm.DB, pagReq dto.PaginationRequest, filter dto.FilterDataRequest) ([]entity.Registration, int64, error)
+	Index(ctx context.Context, tx *gorm.DB, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest) ([]entity.Registration, int64, error)
 	Create(ctx context.Context, registration entity.Registration, tx *gorm.DB) (entity.Registration, error)
 	Update(ctx context.Context, id string, registration entity.Registration, tx *gorm.DB) error
 	FindByID(ctx context.Context, id string, tx *gorm.DB) (entity.Registration, error)
 	Destroy(ctx context.Context, id string, tx *gorm.DB) error
-	FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterDataRequest) *gorm.DB
+	FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterRegistrationRequest) *gorm.DB
 	FindTotal(ctx context.Context, tx *gorm.DB) (int64, error)
 }
 
@@ -44,7 +44,7 @@ func (r *registrationRepository) FindTotal(ctx context.Context, tx *gorm.DB) (in
 	return total, nil
 }
 
-func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq dto.PaginationRequest, filter dto.FilterDataRequest) ([]entity.Registration, int64, error) {
+func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest) ([]entity.Registration, int64, error) {
 	var registrations []entity.Registration
 	if tx == nil {
 		tx = r.db
@@ -180,17 +180,29 @@ func (r *registrationRepository) Destroy(ctx context.Context, id string, tx *gor
 	return nil
 }
 
-func (r *registrationRepository) FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterDataRequest) *gorm.DB {
+func (r *registrationRepository) FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterRegistrationRequest) *gorm.DB {
 	subQuery := tx.WithContext(ctx).
 		Model(&entity.Registration{}).
 		Where("registrations.deleted_at IS NULL")
 
-	if len(filter.ActivityID) > 0 {
-		subQuery = subQuery.Where("registrations.activity_id IN ?", filter.ActivityID)
+	if filter.LOValidation != "" {
+		subQuery = subQuery.Where("registrations.lo_validation = ?", filter.LOValidation)
 	}
 
-	if len(filter.UserID) > 0 {
-		subQuery = subQuery.Where("registrations.user_id IN ?", filter.UserID)
+	if filter.AcademicAdvisorValidation != "" {
+		subQuery = subQuery.Where("registrations.academic_advisor_validation = ?", filter.AcademicAdvisorValidation)
+	}
+
+	if filter.ActivityName != "" {
+		subQuery = subQuery.Where("registrations.activity_name = ?", filter.ActivityName)
+	}
+
+	if filter.UserName != "" {
+		subQuery = subQuery.Where("registrations.user_name = ?", filter.UserName)
+	}
+
+	if filter.UserNRP != "" {
+		subQuery = subQuery.Where("registrations.user_nrp = ?", filter.UserNRP)
 	}
 
 	if filter.AcademicAdvisor != "" {

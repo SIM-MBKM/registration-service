@@ -29,18 +29,22 @@ type (
 	}
 
 	FilterRegistrationRequest struct {
-		ActivityName    string `json:"activity_name"`
-		UserName        string `json:"user_name"`
-		UserNRP         string `json:"user_nrp"`
-		AcademicAdvisor string `json:"academic_advisor"`
-		ApprovalStatus  bool   `json:"approval_status"`
+		ActivityName              string `json:"activity_name"`
+		UserName                  string `json:"user_name"`
+		UserNRP                   string `json:"user_nrp"`
+		AcademicAdvisor           string `json:"academic_advisor"`
+		ApprovalStatus            bool   `json:"approval_status"`
+		LOValidation              string `json:"lo_validation"`
+		AcademicAdvisorValidation string `json:"academic_advisor_validation"`
 	}
 
 	FilterDataRequest struct {
-		ActivityID      []string `json:"activity_id"`
-		UserID          []string `json:"user_id"`
-		AcademicAdvisor string   `json:"academic_advisor"`
-		ApprovalStatus  bool     `json:"approval_status"`
+		ActivityID                []string `json:"activity_id"`
+		UserID                    []string `json:"user_id"`
+		AcademicAdvisor           string   `json:"academic_advisor"`
+		ApprovalStatus            bool     `json:"approval_status"`
+		LOValidation              string   `json:"lo_validation"`
+		AcademicAdvisorValidation string   `json:"academic_advisor_validation"`
 	}
 
 	CreateRegistrationRequest struct {
@@ -56,8 +60,6 @@ type (
 	}
 
 	UpdateRegistrationDataRequest struct {
-		ActivityID           string `json:"activity_id" binding:"required"`
-		UserID               string `json:"user_id" binding:"required"`
 		AdvisingConfirmation bool   `json:"advising_confirmation" binding:"required"`
 		AcademicAdvisor      string `json:"academic_advisor" binding:"required"`
 		AcademicAdvisorEmail string `json:"academic_advisor_email" binding:"required"`

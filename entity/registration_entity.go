@@ -6,7 +6,10 @@ type (
 	Registration struct {
 		ID                        uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 		ActivityID                string    `json:"activity_id" gorm:"not null"`
+		ActivityName              string    `json:"activity_name" gorm:"not null"`
 		UserID                    string    `json:"user_id" gorm:"not null"`
+		UserName                  string    `json:"user_name" gorm:"not null"`
+		UserNRP                   string    `json:"user_nrp" gorm:"not null"`
 		AdvisingConfirmation      bool      `json:"advising_confirmation" gorm:"not null"`
 		AcademicAdvisor           string    `json:"academic_advisor" gorm:"not null"`
 		AcademicAdvisorEmail      string    `json:"academic_advisor_email" gorm:"not null"`
