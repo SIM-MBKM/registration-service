@@ -25,7 +25,7 @@ type registrationService struct {
 type RegistrationService interface {
 	FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	FindRegistrationByID(ctx context.Context, id string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
-	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, tx *gorm.DB, token string) error
+	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error
 	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error
 	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
 	GetActivitiesData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
@@ -146,7 +146,7 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 	return response, nil
 }
 
-func (s *registrationService) CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, tx *gorm.DB, token string) error {
+func (s *registrationService) CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error {
 	var registrationEntity entity.Registration
 	var activitiesData []map[string]interface{}
 	var usersData []map[string]interface{}
@@ -169,6 +169,11 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 
 	// upload file
 	result, err := s.fileService.storage.GcsUpload(file, "sim_mbkm", "", "")
+	if err != nil {
+		return errors.New("failed to upload file")
+	}
+
+	geoletterResult, err := s.fileService.storage.GcsUpload(geoletter, "sim_mbkm", "", "")
 	if err != nil {
 		return errors.New("failed to upload file")
 	}
@@ -207,6 +212,18 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	_, err = s.documentRepository.Create(ctx, documentEntity, tx)
+	if err != nil {
+		return err
+	}
+
+	geoletterEntity := entity.Document{
+		RegistrationID: registrationEntity.ID.String(),
+		Name:           geoletter.Filename,
+		FileStorageID:  geoletterResult.FileID,
+		DocumentType:   "Geoletter",
+	}
+
+	_, err = s.documentRepository.Create(ctx, geoletterEntity, tx)
 	if err != nil {
 		return err
 	}

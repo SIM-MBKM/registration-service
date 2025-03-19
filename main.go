@@ -1,7 +1,7 @@
 package main
 
 import (
-	"registration-service/config"
+	localConfig "registration-service/config"
 	"registration-service/helper"
 	"registration-service/middleware"
 	"registration-service/routes"
@@ -19,7 +19,7 @@ func main() {
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8087")
 
-	db := config.SetupDatabaseConnection()
+	db := localConfig.SetupDatabaseConnection()
 
 	config, err := storageService.LoadConfig()
 	if err != nil {
@@ -30,15 +30,15 @@ func main() {
 
 	tokenManager := storageService.NewCacheTokenManager(config, cache)
 
-	registrationController, err := InitializeRegistration(db, config.SecretKey(secretKeyService), config.UserManagementbaseURI(userManagementServiceURI), config.BaseURI(activityManagementServiceURI), []string{"/async"}, config, tokenManager)
+	registrationController, err := InitializeRegistration(db, localConfig.SecretKey(secretKeyService), localConfig.UserManagementbaseURI(userManagementServiceURI), localConfig.ActivityManagementbaseURI(activityManagementServiceURI), []string{"/async"}, config, tokenManager)
 
 	if err != nil {
 		helper.PanicIfError(err)
 	}
 
-	defer config.CloseDatabaseConnection(db)
+	defer localConfig.CloseDatabaseConnection(db)
 
-	server := config.NewServer()
+	server := localConfig.NewServer()
 	server.Use(middleware.CORS())
 
 	routes.RegistrationRoutes(server, registrationController)

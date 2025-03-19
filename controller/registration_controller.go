@@ -86,6 +86,14 @@ func (c *registrationController) CreateRegistration(ctx *gin.Context) {
 		})
 		return
 	}
+	geoletter, err := ctx.FormFile("geoletter")
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
 
 	// get header token
 	token := ctx.GetHeader("Authorization")
@@ -97,7 +105,7 @@ func (c *registrationController) CreateRegistration(ctx *gin.Context) {
 		return
 	}
 
-	err = c.registrationService.CreateRegistration(ctx, request, file, nil, token)
+	err = c.registrationService.CreateRegistration(ctx, request, file, geoletter, nil, token)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
 			Status:  dto.STATUS_ERROR,
