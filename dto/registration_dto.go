@@ -48,15 +48,15 @@ type (
 	}
 
 	CreateRegistrationRequest struct {
-		ActivityID           string `json:"activity_id" binding:"required"`
-		UserID               string `json:"user_id" binding:"required"`
-		AdvisingConfirmation bool   `json:"advising_confirmation" binding:"required"`
-		AcademicAdvisor      string `json:"academic_advisor" binding:"required"`
-		AcademicAdvisorEmail string `json:"academic_advisor_email" binding:"required"`
-		MentorName           string `json:"mentor_name" binding:"required"`
-		MentorEmail          string `json:"mentor_email" binding:"required"`
-		Semester             string `json:"semester" binding:"required"`
-		TotalSKS             int    `json:"total_sks" binding:"required"`
+		ActivityID           string `form:"activity_id" binding:"required"`
+		AcademicAdvisorID    string `form:"academic_advisor_id" binding:"required"`
+		AdvisingConfirmation bool   `form:"advising_confirmation" binding:"required"`
+		AcademicAdvisor      string `form:"academic_advisor" binding:"required"` // This field doesn't match what's in your form
+		AcademicAdvisorEmail string `form:"academic_advisor_email" binding:"required"`
+		MentorName           string `form:"mentor_name" binding:"required"`
+		MentorEmail          string `form:"mentor_email" binding:"required"`
+		Semester             string `form:"semester" binding:"required"`
+		TotalSKS             int    `form:"total_sks" binding:"required"`
 	}
 
 	UpdateRegistrationDataRequest struct {

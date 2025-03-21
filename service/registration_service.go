@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"mime/multipart"
 	"reflect"
 	"registration-service/dto"
@@ -11,6 +12,7 @@ import (
 	"registration-service/repository"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +31,8 @@ type RegistrationService interface {
 	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error
 	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
 	GetActivitiesData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
-	GetUsersData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
+	GetUserByFilter(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{}
+	GetUserData(method string, endpoint string, token string) map[string]interface{}
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -44,44 +47,81 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 
 func (s *registrationService) GetActivitiesData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{} {
 	res, err := s.activityManagementService.baseService.Request(method, endpoint, data, token)
+	log.Println("DATA", res)
 	if err != nil {
 		return nil
 	}
 
-	activities, ok := res["data"].([]map[string]interface{})
+	// First, get the data as []interface{}
+	activitiesInterface, ok := res["data"].([]interface{})
 	if !ok {
+		log.Println("Failed to convert data to []interface{}")
 		return nil
 	}
 
-	// i need to send id, name, of the activity
+	// Then, convert each item to map[string]interface{}
 	var activitiesData []map[string]interface{}
-	for _, activity := range activities {
+	for _, activityInterface := range activitiesInterface {
+		activity, ok := activityInterface.(map[string]interface{})
+		if !ok {
+			log.Println("Failed to convert activity to map[string]interface{}")
+			continue
+		}
+
 		activitiesData = append(activitiesData, map[string]interface{}{
 			"id":   activity["id"],
 			"name": activity["name"],
 		})
 	}
+
 	return activitiesData
 }
 
-func (s *registrationService) GetUsersData(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{} {
+func (s *registrationService) GetUserByFilter(data map[string]interface{}, method string, endpoint string, token string) []map[string]interface{} {
 	res, err := s.userManagementService.baseService.Request(method, endpoint, data, token)
 	if err != nil {
 		return nil
 	}
 
-	users, ok := res["data"].([]map[string]interface{})
+	// First, get the data as []interface{}
+	usersInterface, ok := res["data"].([]interface{})
 	if !ok {
+		log.Println("Failed to convert data to []interface{}")
 		return nil
 	}
 
 	var usersData []map[string]interface{}
-	for _, user := range users {
+	for _, userInterface := range usersInterface {
+		user, ok := userInterface.(map[string]interface{})
+		if !ok {
+			log.Println("Failed to convert user to map[string]interface{}")
+			continue
+		}
+
 		usersData = append(usersData, map[string]interface{}{
 			"id":   user["id"],
 			"nrp":  user["nrp"],
 			"name": user["name"],
 		})
+	}
+	return usersData
+}
+func (s *registrationService) GetUserData(method string, endpoint string, token string) map[string]interface{} {
+	res, err := s.userManagementService.baseService.Request(method, endpoint, nil, token)
+	if err != nil {
+		return nil
+	}
+
+	users, ok := res["data"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var usersData map[string]interface{}
+	usersData = map[string]interface{}{
+		"id":   users["id"],
+		"nrp":  users["nrp"],
+		"name": users["name"],
 	}
 	return usersData
 }
@@ -151,20 +191,70 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	var activitiesData []map[string]interface{}
 	var usersData []map[string]interface{}
 
-	if registration.ActivityID != "" {
-		activitiesData = s.GetActivitiesData(map[string]interface{}{
-			"activity_id": registration.ActivityID,
-		}, "POST", "/filter", token)
+	// get user data
+	userData := s.GetUserData("GET", "user-management-service/api/v1/user/role", token)
+	if userData == nil {
+		return errors.New("user data not found")
 	}
 
-	if registration.UserID != "" {
-		usersData = s.GetUsersData(map[string]interface{}{
-			"user_id": registration.UserID,
-		}, "POST", "/filter", token)
+	if registration.ActivityID != "" {
+		activitiesData = s.GetActivitiesData(map[string]interface{}{
+			"activity_id":     registration.ActivityID,
+			"program_type_id": "",
+			"level_id":        "",
+			"group_id":        "",
+			"name":            "",
+		}, "POST", "activity-management/api/activity/filter", token)
+	}
+
+	if userData["id"] != "" {
+		usersData = s.GetUserByFilter(map[string]interface{}{
+			"user_id": userData["id"],
+		}, "POST", "user-management-service/api/v1/user/filter", token)
 	}
 
 	if len(activitiesData) == 0 || len(usersData) == 0 {
 		return errors.New("data not found")
+	}
+	// Then safely extract values with type assertions and nil checks
+	var activityName string
+	if name, ok := activitiesData[0]["name"]; ok && name != nil {
+		activityName, ok = name.(string)
+		if !ok {
+			activityName = "" // Default value if type assertion fails
+		}
+	} else {
+		activityName = "" // Default value if key doesn't exist or is nil
+	}
+
+	var userID string
+	if id, ok := userData["id"]; ok && id != nil {
+		userID, ok = id.(string)
+		if !ok {
+			userID = "" // Default value if type assertion fails
+		}
+	} else {
+		userID = "" // Default value if key doesn't exist or is nil
+	}
+
+	var userNRP string
+	if nrp, ok := usersData[0]["nrp"]; ok && nrp != nil {
+		userNRP, ok = nrp.(string)
+		if !ok {
+			userNRP = "" // Default value if type assertion fails
+		}
+	} else {
+		userNRP = "" // Default value if key doesn't exist or is nil
+	}
+
+	var userName string
+	if name, ok := usersData[0]["name"]; ok && name != nil {
+		userName, ok = name.(string)
+		if !ok {
+			userName = "" // Default value if type assertion fails
+		}
+	} else {
+		userName = "" // Default value if key doesn't exist or is nil
 	}
 
 	// upload file
@@ -178,16 +268,18 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return errors.New("failed to upload file")
 	}
 
-	loValidation := "Pending"
-	academicAdvisorValidation := "Pending"
+	loValidation := "PENDING"
+	academicAdvisorValidation := "PENDING"
 
 	registrationEntity = entity.Registration{
+		ID:                        uuid.New(),
 		ActivityID:                registration.ActivityID,
-		ActivityName:              activitiesData[0]["name"].(string),
-		UserID:                    registration.UserID,
-		UserNRP:                   usersData[0]["nrp"].(string),
-		UserName:                  usersData[0]["name"].(string),
+		ActivityName:              activityName,
+		UserID:                    userID,
+		UserNRP:                   userNRP,
+		UserName:                  userName,
 		AdvisingConfirmation:      registration.AdvisingConfirmation,
+		AcademicAdvisorID:         registration.AcademicAdvisorID,
 		AcademicAdvisor:           registration.AcademicAdvisor,
 		AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
 		MentorName:                registration.MentorName,
@@ -205,6 +297,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 
 	// Create document entity
 	documentEntity := entity.Document{
+		ID:             uuid.New(),
 		RegistrationID: registrationEntity.ID.String(),
 		Name:           file.Filename,
 		FileStorageID:  result.FileID,
@@ -217,6 +310,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	geoletterEntity := entity.Document{
+		ID:             uuid.New(),
 		RegistrationID: registrationEntity.ID.String(),
 		Name:           geoletter.Filename,
 		FileStorageID:  geoletterResult.FileID,

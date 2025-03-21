@@ -34,7 +34,7 @@ type DocumentService interface {
 	DeleteDocument(ctx context.Context, id string, tx *gorm.DB) error
 }
 
-func NewDocumentService(documentRepository repository.DocumentRepository, registrationRepository repository.RegistrationRepository, secretKey string, baseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) DocumentService {
+func NewDocumentService(documentRepository repository.DocumentRepository, registrationRepository repository.RegistrationRepository, config *storageService.Config, tokenManager *storageService.CacheTokenManager) DocumentService {
 	return &documentService{
 		documentRepository:     documentRepository,
 		registrationRepository: registrationRepository,

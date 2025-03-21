@@ -26,6 +26,14 @@ func InitializeRegistration(db *gorm.DB, secretKey config.SecretKey, userManagem
 	return registrationController, nil
 }
 
+func InitializeDocument(db *gorm.DB, config2 *storage.Config, tokenManager *storage.CacheTokenManager) (controller.DocumentController, error) {
+	documentRepository := ProvideDocumentRepository(db)
+	registrationRepository := ProvideRegistrationRepository(db)
+	documentService := ProvideDocumentService(documentRepository, registrationRepository, config2, tokenManager)
+	documentController := ProvideDocumentController(documentService)
+	return documentController, nil
+}
+
 // wire.go:
 
 func ProvideRegistrationRepository(db *gorm.DB) repository.RegistrationRepository {
@@ -57,4 +65,23 @@ var RegistrationSet = wire.NewSet(
 	ProvideDocumentRepository,
 	ProvideRegistrationService,
 	ProvideRegistrationController,
+)
+
+func ProvideDocumentService(
+	documentRepository repository.DocumentRepository,
+	registrationRepository repository.RegistrationRepository, config2 *storage.Config,
+	tokenManager *storage.CacheTokenManager,
+) service.DocumentService {
+	return service.NewDocumentService(documentRepository, registrationRepository, config2, tokenManager)
+}
+
+func ProvideDocumentController(documentService service.DocumentService) controller.DocumentController {
+	return controller.NewDocumentController(documentService)
+}
+
+var DocumentSet = wire.NewSet(
+	ProvideDocumentRepository,
+	ProvideRegistrationRepository,
+	ProvideDocumentService,
+	ProvideDocumentController,
 )

@@ -21,7 +21,7 @@ type DocumentController interface {
 	DeleteDocument(ctx *gin.Context)
 }
 
-func NewProgramTypeController(documentService service.DocumentService) DocumentController {
+func NewDocumentController(documentService service.DocumentService) DocumentController {
 	return &documentController{documentService: documentService}
 }
 

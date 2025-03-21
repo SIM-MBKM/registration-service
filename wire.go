@@ -58,3 +58,32 @@ func InitializeRegistration(
 	wire.Build(RegistrationSet)
 	return nil, nil
 }
+
+func ProvideDocumentService(
+	documentRepository repository.DocumentRepository,
+	registrationRepository repository.RegistrationRepository,
+	config *storageService.Config,
+	tokenManager *storageService.CacheTokenManager,
+) service.DocumentService {
+	return service.NewDocumentService(documentRepository, registrationRepository, config, tokenManager)
+}
+
+func ProvideDocumentController(documentService service.DocumentService) controller.DocumentController {
+	return controller.NewDocumentController(documentService)
+}
+
+var DocumentSet = wire.NewSet(
+	ProvideDocumentRepository,
+	ProvideRegistrationRepository,
+	ProvideDocumentService,
+	ProvideDocumentController,
+)
+
+func InitializeDocument(
+	db *gorm.DB,
+	config *storageService.Config,
+	tokenManager *storageService.CacheTokenManager,
+) (controller.DocumentController, error) {
+	wire.Build(DocumentSet)
+	return nil, nil
+}

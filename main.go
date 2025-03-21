@@ -17,7 +17,7 @@ func main() {
 	port := helpers.GetEnv("GOLANG_PORT", "8088")
 
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
-	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8087")
+	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
 
 	db := localConfig.SetupDatabaseConnection()
 
@@ -36,11 +36,18 @@ func main() {
 		helper.PanicIfError(err)
 	}
 
+	documentController, err := InitializeDocument(db, config, tokenManager)
+
+	if err != nil {
+		helper.PanicIfError(err)
+	}
+
 	defer localConfig.CloseDatabaseConnection(db)
 
 	server := localConfig.NewServer()
 	server.Use(middleware.CORS())
 
 	routes.RegistrationRoutes(server, registrationController)
+	routes.DocumentRoutes(server, documentController)
 	server.Run(":" + port)
 }

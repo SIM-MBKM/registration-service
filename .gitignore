@@ -6,3 +6,4 @@ volumes
 storage/*
 static/*
 main
+*.json

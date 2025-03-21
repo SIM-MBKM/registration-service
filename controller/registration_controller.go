@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log"
 	"net/http"
 	"registration-service/dto"
 	"registration-service/helper"
@@ -69,8 +70,9 @@ func (c *registrationController) GetAllRegistrations(ctx *gin.Context) {
 
 func (c *registrationController) CreateRegistration(ctx *gin.Context) {
 	var request dto.CreateRegistrationRequest
-	err := ctx.ShouldBindJSON(&request)
+	err := ctx.ShouldBind(&request)
 	if err != nil {
+		log.Println("ERROR BINDING JSON", err)
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
 			Status:  dto.STATUS_ERROR,
 			Message: err.Error(),

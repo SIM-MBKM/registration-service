@@ -11,6 +11,7 @@ type (
 		UserName                  string    `json:"user_name" gorm:"not null"`
 		UserNRP                   string    `json:"user_nrp" gorm:"not null"`
 		AdvisingConfirmation      bool      `json:"advising_confirmation" gorm:"not null"`
+		AcademicAdvisorID         string    `json:"academic_advisor_id" gorm:"not null"`
 		AcademicAdvisor           string    `json:"academic_advisor" gorm:"not null"`
 		AcademicAdvisorEmail      string    `json:"academic_advisor_email" gorm:"not null"`
 		MentorName                string    `json:"mentor_name" gorm:"not null"`
