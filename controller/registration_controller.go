@@ -72,7 +72,6 @@ func (c *registrationController) CreateRegistration(ctx *gin.Context) {
 	var request dto.CreateRegistrationRequest
 	err := ctx.ShouldBind(&request)
 	if err != nil {
-		log.Println("ERROR BINDING JSON", err)
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
 			Status:  dto.STATUS_ERROR,
 			Message: err.Error(),

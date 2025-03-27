@@ -13,8 +13,8 @@ type UserManagementService struct {
 const (
 	GET_USER_BY_ID_ENDPOINT     = "user-management-service/api/user"
 	GET_USER_BY_FILTER_ENDPOINT = "user-management-service/api/v1/user/filter"
-	GET_USER_ROLE_ENDPOINT      = "user-management-service/api/role"
-	GET_USER_DATA_ENDPOINT      = "user-management-service/api/v1/user/role"
+	GET_USER_ROLE_ENDPOINT      = "user-management-service/api/v1/user/role"
+	GET_USER_DATA_ENDPOINT      = "user-management-service/api/v1/user"
 )
 
 func NewUserManagementService(baseURI string, asyncURIs []string) *UserManagementService {
@@ -29,6 +29,7 @@ func (s *UserManagementService) GetUserData(method string, token string) map[str
 	if err != nil {
 		return nil
 	}
+
 
 	users, ok := res["data"].(map[string]interface{})
 	if !ok {
@@ -49,6 +50,7 @@ func (s *UserManagementService) GetUserByFilter(data map[string]interface{}, met
 	if err != nil {
 		return nil
 	}
+
 
 	// First, get the data as []interface{}
 	usersInterface, ok := res["data"].([]interface{})

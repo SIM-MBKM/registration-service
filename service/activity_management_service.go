@@ -22,7 +22,6 @@ func NewActivityManagementService(baseURI string, asyncURIs []string) *ActivityM
 
 func (s *ActivityManagementService) GetActivitiesData(data map[string]interface{}, method string, token string) []map[string]interface{} {
 	res, err := s.baseService.Request(method, GET_ACTIVITIY_FILTER_ENDPOINT, data, token)
-	log.Println("DATA", res)
 	if err != nil {
 		return nil
 	}
