@@ -27,7 +27,7 @@ type RegistrationService interface {
 	FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	FindRegistrationByID(ctx context.Context, id string, token string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
 	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error
-	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error
+	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, token string, tx *gorm.DB) error
 	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
 	RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool
 }
@@ -303,7 +303,12 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	return nil
 }
 
-func (s *registrationService) UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error {
+func (s *registrationService) UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, token string, tx *gorm.DB) error {
+	access := s.RegistrationsDataAccess(ctx, id, token, tx)
+	if !access {
+		return errors.New("data not found")
+	}
+
 	// Find existing program type
 	res, err := s.registrationRepository.FindByID(ctx, id, tx)
 	if err != nil {

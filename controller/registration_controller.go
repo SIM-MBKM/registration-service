@@ -148,6 +148,15 @@ func (c *registrationController) GetRegistrationByID(ctx *gin.Context) {
 }
 
 func (c *registrationController) UpdateRegistration(ctx *gin.Context) {
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
 	id := ctx.Param("id")
 	var request dto.UpdateRegistrationDataRequest
 	err := ctx.ShouldBindJSON(&request)
@@ -159,7 +168,7 @@ func (c *registrationController) UpdateRegistration(ctx *gin.Context) {
 		return
 	}
 
-	err = c.registrationService.UpdateRegistration(ctx, id, request, nil)
+	err = c.registrationService.UpdateRegistration(ctx, id, request, token, nil)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
 			Status:  dto.STATUS_ERROR,

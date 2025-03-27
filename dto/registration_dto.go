@@ -60,12 +60,12 @@ type (
 	}
 
 	UpdateRegistrationDataRequest struct {
-		AdvisingConfirmation bool   `json:"advising_confirmation" binding:"required"`
-		AcademicAdvisor      string `json:"academic_advisor" binding:"required"`
-		AcademicAdvisorEmail string `json:"academic_advisor_email" binding:"required"`
-		MentorName           string `json:"mentor_name" binding:"required"`
-		MentorEmail          string `json:"mentor_email" binding:"required"`
-		Semester             string `json:"semester" binding:"required"`
-		TotalSKS             int    `json:"total_sks" binding:"required"`
+		AdvisingConfirmation bool   `json:"advising_confirmation"`
+		AcademicAdvisor      string `json:"academic_advisor"`
+		AcademicAdvisorEmail string `json:"academic_advisor_email"`
+		MentorName           string `json:"mentor_name"`
+		MentorEmail          string `json:"mentor_email"`
+		Semester             string `json:"semester"`
+		TotalSKS             int    `json:"total_sks"`
 	}
 )
