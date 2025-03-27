@@ -41,6 +41,8 @@ func (s *UserManagementService) GetUserData(method string, token string) map[str
 		"id":   users["id"],
 		"nrp":  users["nrp"],
 		"name": users["name"],
+		"role": users["role"],
+		"email": users["email"],
 	}
 	return usersData
 }
