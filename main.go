@@ -5,6 +5,7 @@ import (
 	"registration-service/helper"
 	"registration-service/middleware"
 	"registration-service/routes"
+	"registration-service/service"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
 	"github.com/SIM-MBKM/mod-service/src/helpers"
@@ -47,7 +48,9 @@ func main() {
 	server := localConfig.NewServer()
 	server.Use(middleware.CORS())
 
-	routes.RegistrationRoutes(server, registrationController)
+	userService := service.NewUserManagementService(userManagementServiceURI, []string{"/async"})
+
+	routes.RegistrationRoutes(server, registrationController, *userService)
 	routes.DocumentRoutes(server, documentController)
 	server.Run(":" + port)
 }

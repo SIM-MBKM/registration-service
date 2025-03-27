@@ -6,6 +6,7 @@ const (
 	// StatusError is a constant for error status
 	STATUS_ERROR         = "error"
 	MESSAGE_UNAUTHORIZED = "Unauthorized"
+	MESSAGE_FORBIDDEN    = "Forbidden"
 )
 
 type Response struct {

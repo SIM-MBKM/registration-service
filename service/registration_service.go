@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
 	"mime/multipart"
 	"reflect"
 	"registration-service/dto"
@@ -144,7 +143,6 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return errors.New("Activity not found") // Default value if key doesn't exist or is nil
 	}
 
-
 	var userID string
 	if id, ok := userData["id"]; ok && id != nil {
 		userID, ok = id.(string)
@@ -154,7 +152,6 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	} else {
 		return errors.New("User not found") // Default value if key doesn't exist or is nil
 	}
-
 
 	var userNRP string
 	if nrp, ok := usersData[0]["nrp"]; ok && nrp != nil {
@@ -166,7 +163,6 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return errors.New("User not found") // Default value if key doesn't exist or is nil
 	}
 
-
 	var userName string
 	if name, ok := usersData[0]["name"]; ok && name != nil {
 		userName, ok = name.(string)
@@ -176,7 +172,6 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	} else {
 		return errors.New("User not found") // Default value if key doesn't exist or is nil
 	}
-
 
 	// upload file
 	result, err := s.fileService.storage.GcsUpload(file, "sim_mbkm", "", "")

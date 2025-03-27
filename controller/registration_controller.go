@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 	"registration-service/dto"
 	"registration-service/helper"

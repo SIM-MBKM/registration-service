@@ -53,7 +53,7 @@ func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq 
 	subQuery := r.FilterSubQuery(ctx, tx, filter)
 
 	err := subQuery.
-		Preload("Documents").
+		Preload("Document").
 		Offset(pagReq.Offset).
 		Limit(pagReq.Limit).
 		Find(&registrations).Error
