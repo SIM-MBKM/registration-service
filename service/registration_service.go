@@ -25,10 +25,11 @@ type registrationService struct {
 
 type RegistrationService interface {
 	FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
-	FindRegistrationByID(ctx context.Context, id string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
+	FindRegistrationByID(ctx context.Context, id string, token string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
 	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error
 	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, tx *gorm.DB) error
 	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
+	RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -39,6 +40,62 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
 	}
+}
+
+func (s *registrationService) RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool {
+	var state bool
+	state = false
+	registration, err := s.registrationRepository.FindByID(ctx, id, tx)
+	if err != nil {
+		return false
+	}
+
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return false
+	}
+
+	var userID string
+	if id, ok := userData["id"]; ok && id != nil {
+		userID, ok = id.(string)
+		if !ok {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	var userRole string
+	if role, ok := userData["role"]; ok && role != nil {
+		userRole, ok = role.(string)
+		if !ok {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	var userEmail string
+	if email, ok := userData["email"]; ok && email != nil {
+		userEmail, ok = email.(string)
+		if !ok {
+			return false
+		}
+	} else {
+		return false
+	}
+
+	if userRole == "MAHASISWA" {
+		if registration.UserID == userID {
+			state = true
+		}
+	} else if userRole == "DOSEN PEMBIMBING" {
+		if registration.AcademicAdvisorEmail == userEmail {
+			state = true
+		}
+	}
+
+	return state
 }
 
 func (s *registrationService) FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {
@@ -73,7 +130,12 @@ func (s *registrationService) FindAllRegistrations(ctx context.Context, pagReq d
 	return response, metaData, nil
 }
 
-func (s *registrationService) FindRegistrationByID(ctx context.Context, id string, tx *gorm.DB) (dto.GetRegistrationResponse, error) {
+func (s *registrationService) FindRegistrationByID(ctx context.Context, id string, token string, tx *gorm.DB) (dto.GetRegistrationResponse, error) {
+	access := s.RegistrationsDataAccess(ctx, id, token, tx)
+	if !access {
+		return dto.GetRegistrationResponse{}, errors.New("data not found")
+	}
+
 	registration, err := s.registrationRepository.FindByID(ctx, id, tx)
 	if err != nil {
 		return dto.GetRegistrationResponse{}, err

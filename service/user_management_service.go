@@ -11,10 +11,11 @@ type UserManagementService struct {
 }
 
 const (
-	GET_USER_BY_ID_ENDPOINT     = "user-management-service/api/user"
-	GET_USER_BY_FILTER_ENDPOINT = "user-management-service/api/v1/user/filter"
-	GET_USER_ROLE_ENDPOINT      = "user-management-service/api/v1/user/role"
-	GET_USER_DATA_ENDPOINT      = "user-management-service/api/v1/user"
+	GET_USER_BY_ID_ENDPOINT          = "user-management-service/api/user"
+	GET_USER_BY_FILTER_ENDPOINT      = "user-management-service/api/v1/user/filter"
+	GET_USER_ROLE_ENDPOINT           = "user-management-service/api/v1/user/role"
+	GET_USER_DATA_ENDPOINT           = "user-management-service/api/v1/user"
+	GET_DOSEN_DATA_BY_EMAIL_ENDPOINT = "user-management-service/api/v1/dosen/email"
 )
 
 func NewUserManagementService(baseURI string, asyncURIs []string) *UserManagementService {
@@ -29,7 +30,6 @@ func (s *UserManagementService) GetUserData(method string, token string) map[str
 	if err != nil {
 		return nil
 	}
-
 
 	users, ok := res["data"].(map[string]interface{})
 	if !ok {
@@ -50,7 +50,6 @@ func (s *UserManagementService) GetUserByFilter(data map[string]interface{}, met
 	if err != nil {
 		return nil
 	}
-
 
 	// First, get the data as []interface{}
 	usersInterface, ok := res["data"].([]interface{})
@@ -92,4 +91,25 @@ func (s *UserManagementService) GetUserRole(method string, token string) map[str
 		"role": roles["role"],
 	}
 	return rolesData
+}
+
+func (s *UserManagementService) GetDosenDataByEmail(data map[string]interface{}, method string, token string) map[string]interface{} {
+	res, err := s.baseService.Request(method, GET_DOSEN_DATA_BY_EMAIL_ENDPOINT, data, token)
+	if err != nil {
+		return nil
+	}
+
+	dosen, ok := res["data"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var dosenData map[string]interface{}
+	dosenData = map[string]interface{}{
+		"id":    dosen["id"],
+		"nip":   dosen["nrp"],
+		"name":  dosen["name"],
+		"email": dosen["email"],
+	}
+	return dosenData
 }

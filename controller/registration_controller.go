@@ -121,8 +121,17 @@ func (c *registrationController) CreateRegistration(ctx *gin.Context) {
 }
 
 func (c *registrationController) GetRegistrationByID(ctx *gin.Context) {
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
 	id := ctx.Param("id")
-	activity, err := c.registrationService.FindRegistrationByID(ctx, id, nil)
+	activity, err := c.registrationService.FindRegistrationByID(ctx, id, token, nil)
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
 			Status:  dto.STATUS_ERROR,
