@@ -104,8 +104,8 @@ func (c *registrationController) ApproveRegistration(ctx *gin.Context) {
 		return
 	}
 
-	ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
-		Status:  dto.STATUS_ERROR,
+	ctx.AbortWithStatusJSON(http.StatusOK, dto.Response{
+		Status:  dto.STATUS_SUCCESS,
 		Message: dto.MESSAGE_REGISTRATION_UPDATE_SUCCESS,
 	})
 	return
