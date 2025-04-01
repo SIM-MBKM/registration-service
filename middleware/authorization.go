@@ -8,12 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Self(userService service.UserManagementService) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		
-	}
-}
-
 func AuthorizationRole(userService service.UserManagementService, role []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// get header token
