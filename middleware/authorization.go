@@ -57,6 +57,9 @@ func AuthorizationRole(userService service.UserManagementService, role []string)
 			return
 		}
 
+		// save role to context
+		c.Set("userRole", userRole)
+
 		c.Next()
 	}
 }

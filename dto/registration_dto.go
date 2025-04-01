@@ -6,6 +6,7 @@ const (
 	MESSAGE_REGISTRATION_CREATE_SUCCESS  = "Create registration success"
 	MESSAGE_REGISTRATION_UPDATE_SUCCESS  = "Update registration success"
 	MESSAGE_REGISTRATION_DELETE_SUCCESS  = "Delete registration success"
+	MESSAGE_REGISTRATION_UPDATE_ERROR    = "Update registration failed"
 )
 
 type (
@@ -60,7 +61,8 @@ type (
 	}
 
 	ApprovalRequest struct {
-		Approval string `json:"approval" binding:"required"`
+		Status string `json:"status" binding:"required"`
+		ID     string `json:"id" binding:"required"`
 	}
 
 	UpdateRegistrationDataRequest struct {

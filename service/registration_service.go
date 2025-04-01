@@ -34,6 +34,8 @@ type RegistrationService interface {
 	FindRegistrationByStudent(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	ValidateAdvisor(ctx context.Context, token string, tx *gorm.DB) string
 	ValidateStudent(ctx context.Context, token string, tx *gorm.DB) string
+	AdvisorRegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
+	LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -44,6 +46,88 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
 	}
+}
+
+func (s *registrationService) LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
+	registration, err := s.registrationRepository.FindByID(ctx, approval.ID, tx)
+
+	if err != nil {
+		return err
+	}
+
+	if registration.LOValidation == "APPROVED" && approval.Status == "APPROVED" {
+		return errors.New("Registration already approved")
+	}
+
+	if registration.LOValidation == "REJECTED" && approval.Status == "REJECTED" {
+		return errors.New("Registration already rejected")
+	}
+
+	if approval.Status == "APPROVED" {
+		registration.LOValidation = "APPROVED"
+		if registration.AcademicAdvisorValidation == "APPROVED" {
+			registration.ApprovalStatus = true
+		}
+	}
+	if approval.Status == "REJECTED" {
+		registration.LOValidation = "REJECTED"
+		if registration.AcademicAdvisorValidation == "REJECTED" {
+			registration.ApprovalStatus = false
+		}
+	}
+
+	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
+	userEmail := s.ValidateAdvisor(ctx, token, tx)
+	if userEmail == "" {
+		return errors.New("Unauthorized")
+	}
+	registration, err := s.registrationRepository.FindByID(ctx, approval.ID, tx)
+
+	if err != nil {
+		return err
+	}
+
+	if registration.AcademicAdvisorEmail != userEmail {
+		return errors.New("Unauthorized")
+	}
+
+	if registration.AcademicAdvisorValidation == "APPROVED" && approval.Status == "APPROVED" {
+		return errors.New("Registration already approved")
+	}
+
+	if registration.AcademicAdvisorValidation == "REJECTED" && approval.Status == "REJECTED" {
+		return errors.New("Registration already rejected")
+	}
+
+	if approval.Status == "APPROVED" {
+		registration.AcademicAdvisorValidation = "APPROVED"
+		if registration.LOValidation == "APPROVED" {
+			registration.ApprovalStatus = true
+		}
+	}
+	if approval.Status == "REJECTED" {
+		registration.AcademicAdvisorValidation = "REJECTED"
+		if registration.LOValidation == "REJECTED" {
+			registration.ApprovalStatus = false
+		}
+	}
+
+	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *registrationService) FindRegistrationByStudent(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {

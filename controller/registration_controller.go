@@ -21,12 +21,94 @@ type RegistrationController interface {
 	DeleteRegistration(ctx *gin.Context)
 	GetRegistrationsByAdvisor(ctx *gin.Context)
 	GetRegistrationsByStudent(ctx *gin.Context)
+	ApproveRegistration(ctx *gin.Context)
 }
 
 func NewRegistrationController(registrationService service.RegistrationService) RegistrationController {
 	return &registrationController{
 		registrationService: registrationService,
 	}
+}
+
+func (c *registrationController) ApproveRegistration(ctx *gin.Context) {
+	var request dto.ApprovalRequest
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	userRole, exists := ctx.Get("userRole")
+
+	if !exists {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	userRoleStr, ok := userRole.(string)
+	if !ok {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	if userRoleStr == "DOSEN PEMBIMBING" {
+		err := c.registrationService.AdvisorRegistrationApproval(ctx, token, request, nil)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+				Status:  dto.STATUS_ERROR,
+				Message: dto.MESSAGE_REGISTRATION_UPDATE_ERROR,
+			})
+			return
+		}
+	} else if userRoleStr == "ADMIN" {
+		err := c.registrationService.LORegistrationApproval(ctx, token, request, nil)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+				Status:  dto.STATUS_ERROR,
+				Message: dto.MESSAGE_REGISTRATION_UPDATE_ERROR,
+			})
+			return
+		}
+	} else if userRoleStr == "LO-MBKM" {
+		err := c.registrationService.LORegistrationApproval(ctx, token, request, nil)
+		if err != nil {
+			ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+				Status:  dto.STATUS_ERROR,
+				Message: dto.MESSAGE_REGISTRATION_UPDATE_ERROR,
+			})
+			return
+		}
+	} else {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+		Status:  dto.STATUS_ERROR,
+		Message: dto.MESSAGE_REGISTRATION_UPDATE_SUCCESS,
+	})
+	return
 }
 
 func (c *registrationController) GetRegistrationsByStudent(ctx *gin.Context) {
