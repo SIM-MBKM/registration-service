@@ -28,8 +28,12 @@ type RegistrationService interface {
 	FindRegistrationByID(ctx context.Context, id string, token string, tx *gorm.DB) (dto.GetRegistrationResponse, error)
 	CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error
 	UpdateRegistration(ctx context.Context, id string, registration dto.UpdateRegistrationDataRequest, token string, tx *gorm.DB) error
-	DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error
+	DeleteRegistration(ctx context.Context, id string, token string, tx *gorm.DB) error
 	RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool
+	FindRegistrationByAdvisor(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
+	FindRegistrationByStudent(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
+	ValidateAdvisor(ctx context.Context, token string, tx *gorm.DB) string
+	ValidateStudent(ctx context.Context, token string, tx *gorm.DB) string
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -40,6 +44,166 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
 	}
+}
+
+func (s *registrationService) FindRegistrationByStudent(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {
+	userNRP := s.ValidateStudent(ctx, token, tx)
+	if userNRP == "" {
+		return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, errors.New("Unauthorized")
+	}
+
+	filter.UserNRP = userNRP
+
+	// filter user data
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+	}
+
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	var response []dto.GetRegistrationResponse
+	for _, registration := range registrations {
+		response = append(response, dto.GetRegistrationResponse{
+			ID:                        registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			UserID:                    registration.UserID,
+			UserNRP:                   registration.UserNRP,
+			AdvisingConfirmation:      registration.AdvisingConfirmation,
+			AcademicAdvisor:           registration.AcademicAdvisor,
+			AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
+			MentorName:                registration.MentorName,
+			MentorEmail:               registration.MentorEmail,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			Documents:                 convertToDocumentResponse(registration.Document),
+		})
+	}
+
+	return response, metaData, nil
+}
+
+func (s *registrationService) FindRegistrationByAdvisor(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {
+	userEmail := s.ValidateAdvisor(ctx, token, tx)
+	if userEmail == "" {
+		return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, errors.New("Unauthorized")
+	}
+
+	filter.AcademicAdvisorEmail = userEmail
+
+	// filter user data
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+	}
+
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	var response []dto.GetRegistrationResponse
+	for _, registration := range registrations {
+		response = append(response, dto.GetRegistrationResponse{
+			ID:                        registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			UserID:                    registration.UserID,
+			UserNRP:                   registration.UserNRP,
+			AdvisingConfirmation:      registration.AdvisingConfirmation,
+			AcademicAdvisor:           registration.AcademicAdvisor,
+			AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
+			MentorName:                registration.MentorName,
+			MentorEmail:               registration.MentorEmail,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			Documents:                 convertToDocumentResponse(registration.Document),
+		})
+	}
+
+	return response, metaData, nil
+}
+
+func (s *registrationService) ValidateStudent(ctx context.Context, token string, tx *gorm.DB) string {
+	var state bool
+	state = false
+
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return ""
+	}
+
+	var userRole string
+	if role, ok := userData["role"]; ok && role != nil {
+		userRole, ok = role.(string)
+		if !ok {
+			return ""
+		}
+	} else {
+		return ""
+	}
+
+	var userNRP string
+	if email, ok := userData["nrp"]; ok && email != nil {
+		userNRP, ok = email.(string)
+		if !ok {
+			return ""
+		}
+	} else {
+		return ""
+	}
+
+	if userRole == "MAHASISWA" {
+		state = true
+	}
+
+	if state {
+		return userNRP
+	}
+
+	return ""
+}
+
+func (s *registrationService) ValidateAdvisor(ctx context.Context, token string, tx *gorm.DB) string {
+	var state bool
+	state = false
+
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return ""
+	}
+
+	var userRole string
+	if role, ok := userData["role"]; ok && role != nil {
+		userRole, ok = role.(string)
+		if !ok {
+			return ""
+		}
+	} else {
+		return ""
+	}
+
+	var userEmail string
+	if email, ok := userData["email"]; ok && email != nil {
+		userEmail, ok = email.(string)
+		if !ok {
+			return ""
+		}
+	} else {
+		return ""
+	}
+
+	if userRole == "DOSEN PEMBIMBING" {
+		state = true
+	}
+
+	if state {
+		return userEmail
+	}
+
+	return ""
 }
 
 func (s *registrationService) RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool {
@@ -357,8 +521,27 @@ func (s *registrationService) UpdateRegistration(ctx context.Context, id string,
 	return nil
 }
 
-func (s *registrationService) DeleteRegistration(ctx context.Context, id string, tx *gorm.DB) error {
-	err := s.registrationRepository.Destroy(ctx, id, tx)
+func (s *registrationService) DeleteRegistration(ctx context.Context, id string, token string, tx *gorm.DB) error {
+	access := s.RegistrationsDataAccess(ctx, id, token, tx)
+	if !access {
+		return errors.New("data not found")
+	}
+
+	// get registration by id
+	registration, err := s.registrationRepository.FindByID(ctx, id, tx)
+	if err != nil {
+		return err
+	}
+
+	// delete document
+	for _, document := range registration.Document {
+		_, err = s.fileService.storage.GcsDelete(document.FileStorageID, "sim_mbkm", "")
+		if err != nil {
+			return err
+		}
+	}
+
+	err = s.registrationRepository.Destroy(ctx, id, tx)
 	if err != nil {
 		return err
 	}

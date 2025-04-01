@@ -22,10 +22,30 @@ type RegistrationRepository interface {
 	Destroy(ctx context.Context, id string, tx *gorm.DB) error
 	FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterRegistrationRequest) *gorm.DB
 	FindTotal(ctx context.Context, tx *gorm.DB) (int64, error)
+	FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error)
 }
 
 func NewRegistrationRepository(db *gorm.DB) RegistrationRepository {
 	return &registrationRepository{db: db, baseRepository: NewBaseRepository(db)}
+}
+
+func (r *registrationRepository) FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error) {
+	var registration entity.Registration
+	if tx == nil {
+		tx = r.db
+	}
+
+	err := tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("registrations.deleted_at IS NULL").
+		First(&registration).Error
+
+	if err != nil {
+		return entity.Registration{}, err
+	}
+
+	return registration, nil
 }
 
 func (r *registrationRepository) FindTotal(ctx context.Context, tx *gorm.DB) (int64, error) {
@@ -56,6 +76,7 @@ func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq 
 		Preload("Document").
 		Offset(pagReq.Offset).
 		Limit(pagReq.Limit).
+		Where("registrations.deleted_at IS NULL").
 		Find(&registrations).Error
 
 	if err != nil {
@@ -134,8 +155,10 @@ func (r *registrationRepository) FindByID(ctx context.Context, id string, tx *go
 		tx = r.db
 	}
 	err := tx.WithContext(ctx).
+		Preload("Document").
 		Model(&entity.Registration{}).
 		Where("id = ?", id).
+		Where("registrations.deleted_at IS NULL").
 		First(&registration).Error
 
 	if err != nil {
@@ -169,7 +192,8 @@ func (r *registrationRepository) Destroy(ctx context.Context, id string, tx *gor
 	err = r.db.WithContext(ctx).
 		Model(&entity.Registration{}).
 		Where("id = ?", id).
-		Delete(&entity.Registration{}).Error
+		Update("deleted_at", gorm.Expr("NOW()")).
+		Error
 
 	if err != nil {
 		return err
@@ -205,8 +229,8 @@ func (r *registrationRepository) FilterSubQuery(ctx context.Context, tx *gorm.DB
 		subQuery = subQuery.Where("registrations.user_nrp = ?", filter.UserNRP)
 	}
 
-	if filter.AcademicAdvisor != "" {
-		subQuery = subQuery.Where("registrations.academic_advisor = ?", filter.AcademicAdvisor)
+	if filter.AcademicAdvisorEmail != "" {
+		subQuery = subQuery.Where("registrations.academic_advisor_email = ?", filter.AcademicAdvisorEmail)
 	}
 
 	if filter.ApprovalStatus {

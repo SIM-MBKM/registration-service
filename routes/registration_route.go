@@ -18,6 +18,8 @@ func RegistrationRoutes(router *gin.Engine, programTypeController controller.Reg
 			registrationRoutes.POST("/", programTypeController.CreateRegistration)
 			registrationRoutes.PUT("/:id", programTypeController.UpdateRegistration)
 			registrationRoutes.DELETE("/:id", programTypeController.DeleteRegistration)
+			registrationRoutes.POST("/advisor", middleware.AuthorizationRole(userService, []string{"DOSEN PEMBIMBING"}), programTypeController.GetRegistrationsByAdvisor)
+			registrationRoutes.POST("/student", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetRegistrationsByStudent)
 		}
 	}
 }

@@ -32,7 +32,7 @@ type (
 		ActivityName              string `json:"activity_name"`
 		UserName                  string `json:"user_name"`
 		UserNRP                   string `json:"user_nrp"`
-		AcademicAdvisor           string `json:"academic_advisor"`
+		AcademicAdvisorEmail      string `json:"academic_advisor_email"`
 		ApprovalStatus            bool   `json:"approval_status"`
 		LOValidation              string `json:"lo_validation"`
 		AcademicAdvisorValidation string `json:"academic_advisor_validation"`
@@ -57,6 +57,10 @@ type (
 		MentorEmail          string `form:"mentor_email" binding:"required"`
 		Semester             string `form:"semester" binding:"required"`
 		TotalSKS             int    `form:"total_sks" binding:"required"`
+	}
+
+	ApprovalRequest struct {
+		Approval string `json:"approval" binding:"required"`
 	}
 
 	UpdateRegistrationDataRequest struct {
