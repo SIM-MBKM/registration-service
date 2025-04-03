@@ -62,6 +62,7 @@ func (r *documentRepository) Index(ctx context.Context, pagReq dto.PaginationReq
 
 	err := tx.WithContext(ctx).
 		Model(&entity.Document{}).
+		Where("documents.deleted_at IS NULL").
 		Offset(pagReq.Offset).
 		Limit(pagReq.Limit).
 		First(&documents).Error
@@ -88,6 +89,7 @@ func (r *documentRepository) FindByID(ctx context.Context, id string, tx *gorm.D
 	err := tx.WithContext(ctx).
 		Model(&entity.Document{}).
 		Where("id = ?", id).
+		Where("documents.deleted_at IS NULL").
 		Find(&document).Error
 
 	if err != nil {
@@ -127,7 +129,10 @@ func (r *documentRepository) Update(ctx context.Context, id string, document ent
 
 	var documentEntity entity.Document
 
-	err := r.db.WithContext(ctx).Model(&entity.Document{}).Where("id = ?", id).Find(&documentEntity).Error
+	err := r.db.WithContext(ctx).Model(&entity.Document{}).
+		Where("id = ?", id).
+		Where("documents.deleted_at IS NULL").
+		Find(&documentEntity).Error
 	if err != nil {
 		return err
 	}
@@ -163,7 +168,10 @@ func (r *documentRepository) DeleteByID(ctx context.Context, id string, tx *gorm
 		return err
 	}
 
-	err = r.db.WithContext(ctx).Model(&entity.Document{}).Where("id = ?", id).Find(&documentEntity).Error
+	err = r.db.WithContext(ctx).Model(&entity.Document{}).
+		Where("id = ?", id).
+		Where("documents.deleted_at IS NULL").
+		Find(&documentEntity).Error
 	if err != nil {
 		return err
 	}
