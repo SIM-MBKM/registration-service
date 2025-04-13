@@ -21,6 +21,7 @@ type registrationService struct {
 	userManagementService     *UserManagementService
 	activityManagementService *ActivityManagementService
 	fileService               *FileService
+	matchingManagementService *MatchingManagementService
 }
 
 type RegistrationService interface {
@@ -38,12 +39,13 @@ type RegistrationService interface {
 	LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
 		registrationRepository:    registrationRepository,
 		documentRepository:        documentRepository,
 		userManagementService:     NewUserManagementService(userManagementbaseURI, asyncURIs),
 		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
+		matchingManagementService: NewMatchingManagementService(matchingManagementbaseURI, asyncURIs),
 		fileService:               NewFileService(config, tokenManager),
 	}
 }
@@ -341,6 +343,8 @@ func (s *registrationService) RegistrationsDataAccess(ctx context.Context, id st
 		if registration.AcademicAdvisorEmail == userEmail {
 			state = true
 		}
+	} else if userRole == "ADMIN" || userRole == "LO-MBKM" {
+		state = true
 	}
 
 	return state
@@ -384,6 +388,12 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 		return dto.GetRegistrationResponse{}, errors.New("data not found")
 	}
 
+	// get matching data
+	matchings, err := s.matchingManagementService.GetMatchingByRegistrationID(id, "GET", token)
+	if err != nil {
+		return dto.GetRegistrationResponse{}, err
+	}
+
 	registration, err := s.registrationRepository.FindByID(ctx, id, tx)
 	if err != nil {
 		return dto.GetRegistrationResponse{}, err
@@ -406,6 +416,7 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 		Semester:                  registration.Semester,
 		TotalSKS:                  registration.TotalSKS,
 		Documents:                 convertToDocumentResponse(registration.Document),
+		Matching:                  matchings,
 	}
 
 	return response, nil

@@ -19,6 +19,7 @@ func main() {
 
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
+	matchingManagementServiceURI := helpers.GetEnv("MATCHING_MANAGEMENT_BASE_URI", "http://localhost:8087")
 
 	db := localConfig.SetupDatabaseConnection()
 
@@ -31,7 +32,7 @@ func main() {
 
 	tokenManager := storageService.NewCacheTokenManager(config, cache)
 
-	registrationController, err := InitializeRegistration(db, localConfig.SecretKey(secretKeyService), localConfig.UserManagementbaseURI(userManagementServiceURI), localConfig.ActivityManagementbaseURI(activityManagementServiceURI), []string{"/async"}, config, tokenManager)
+	registrationController, err := InitializeRegistration(db, localConfig.SecretKey(secretKeyService), localConfig.UserManagementbaseURI(userManagementServiceURI), localConfig.ActivityManagementbaseURI(activityManagementServiceURI), localConfig.MatchingManagementbaseURI(matchingManagementServiceURI), []string{"/async"}, config, tokenManager)
 
 	if err != nil {
 		helper.PanicIfError(err)

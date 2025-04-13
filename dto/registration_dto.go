@@ -11,22 +11,23 @@ const (
 
 type (
 	GetRegistrationResponse struct {
-		ID                        string             `json:"id"`
-		ActivityID                string             `json:"activity_id"`
-		UserID                    string             `json:"user_id"`
-		UserNRP                   string             `json:"user_nrp"`
-		UserName                  string             `json:"user_name"`
-		AdvisingConfirmation      bool               `json:"advising_confirmation"`
-		AcademicAdvisor           string             `json:"academic_advisor"`
-		AcademicAdvisorEmail      string             `json:"academic_advisor_email"`
-		MentorName                string             `json:"mentor_name"`
-		MentorEmail               string             `json:"mentor_email"`
-		LOValidation              string             `json:"lo_validation"`
-		AcademicAdvisorValidation string             `json:"academic_advisor_validation"`
-		Semester                  string             `json:"semester"`
-		TotalSKS                  int                `json:"total_sks"`
-		ActivityName              string             `json:"activity_name"`
-		Documents                 []DocumentResponse `json:"documents"`
+		ID                        string                 `json:"id"`
+		ActivityID                string                 `json:"activity_id"`
+		UserID                    string                 `json:"user_id"`
+		UserNRP                   string                 `json:"user_nrp"`
+		UserName                  string                 `json:"user_name"`
+		AdvisingConfirmation      bool                   `json:"advising_confirmation"`
+		AcademicAdvisor           string                 `json:"academic_advisor"`
+		AcademicAdvisorEmail      string                 `json:"academic_advisor_email"`
+		MentorName                string                 `json:"mentor_name"`
+		MentorEmail               string                 `json:"mentor_email"`
+		LOValidation              string                 `json:"lo_validation"`
+		AcademicAdvisorValidation string                 `json:"academic_advisor_validation"`
+		Semester                  string                 `json:"semester"`
+		TotalSKS                  int                    `json:"total_sks"`
+		ActivityName              string                 `json:"activity_name"`
+		Documents                 []DocumentResponse     `json:"documents"`
+		Matching                  map[string]interface{} `json:"matching"`
 	}
 
 	FilterRegistrationRequest struct {
