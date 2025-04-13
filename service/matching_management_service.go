@@ -10,7 +10,7 @@ type MatchingManagementService struct {
 
 const (
 	// MatchingManagementServiceBaseURI is the base URI for the matching management service
-	GET_MATCHING_BY_ACTIVITY_ID = "/matching-management/api/matching/activity/"
+	GET_MATCHING_BY_ACTIVITY_ID = "matching-management/api/matching/activity/"
 )
 
 func NewMatchingManagementService(baseURI string, asyncURIs []string) *MatchingManagementService {
@@ -19,26 +19,19 @@ func NewMatchingManagementService(baseURI string, asyncURIs []string) *MatchingM
 	}
 }
 
-func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, method string, token string) (map[string]interface{}, error) {
-	res, err := s.baseService.Request(method, "/matching-management/api/matching/activity/"+activityID, nil, token)
+func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, method string, token string) (interface{}, error) {
+	res, err := s.baseService.Request(method, "matching-management/api/matching/activity/"+activityID, nil, token)
 	if err != nil {
 		return nil, err
 	}
-	data, ok := res["data"].(map[string]interface{})
-	if !ok {
-		return nil, err
-	}
-	return data, nil
+	return res["data"], nil
 }
 
-func (s *MatchingManagementService) GetMatchingByRegistrationID(registrationID string, method string, token string) (map[string]interface{}, error) {
-	res, err := s.baseService.Request(method, "/matching-management/api/matching/registration/"+registrationID, nil, token)
+func (s *MatchingManagementService) GetMatchingByRegistrationID(registrationID string, method string, token string) (interface{}, error) {
+	res, err := s.baseService.Request(method, "matching-management/api/equivalent/registration/"+registrationID+"?noRecursion=1", nil, token)
 	if err != nil {
 		return nil, err
 	}
-	data, ok := res["data"].(map[string]interface{})
-	if !ok {
-		return nil, err
-	}
-	return data, nil
+
+	return res["data"], nil
 }
