@@ -82,31 +82,30 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		}
 	}
 
-	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-
-	if err != nil {
-		return err
-	}
-
 	if registration.ApprovalStatus == true {
 		// get activity data
 		activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
-			"activity_id": registration.ActivityID,
-		}, "GET", token)
+			"activity_id":     registration.ActivityID,
+			"program_type_id": "",
+			"level_id":        "",
+			"group_id":        "",
+			"name":            "",
+		}, "POST", token)
 
-		// get user data
 		userData := s.userManagementService.GetUserData("GET", token)
 		if userData["id"] != registration.UserID {
 			return errors.New("Unauthorized")
 		}
 
 		// calculate how many times should upload the report schedule and week based on months_duration and start_period
-		monthsDuration := activityData[0]["months_duration"].(int)
+		monthsDuration := int(activityData[0]["months_duration"].(float64))
+
 		startPeriod := activityData[0]["start_period"].(string)
 
 		// convert start_period to time
-		startPeriodTime, err := time.Parse("2006-01-02", startPeriod)
+		startPeriodTime, err := time.Parse(time.RFC3339, startPeriod)
 		if err != nil {
+			log.Println("ERROR PARSE START PERIOD", err)
 			return err
 		}
 
@@ -119,13 +118,14 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 
 			// create report schedule
 			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-				"registration_id":     registration.ID.String(),
-				"user_id":             registration.UserID,
-				"academic_advisor_id": registration.AcademicAdvisorID,
-				"report_type":         "WEEKLY_REPORT",
-				"week":                week,
-				"start_date":          startDate,
-				"end_date":            endDate,
+				"registration_id":        registration.ID.String(),
+				"user_id":                registration.UserID,
+				"academic_advisor_id":    registration.AcademicAdvisorID,
+				"academic_advisor_email": registration.AcademicAdvisorEmail,
+				"report_type":            "WEEKLY_REPORT",
+				"week":                   week,
+				"start_date":             startDate,
+				"end_date":               endDate,
 			}, "POST", token)
 
 			if err != nil {
@@ -135,18 +135,27 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 
 		// create final report
 		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-			"registration_id":     registration.ID.String(),
-			"user_id":             registration.UserID,
-			"academic_advisor_id": registration.AcademicAdvisorID,
-			"report_type":         "FINAL_REPORT",
-			"week":                monthsDuration,
-			"start_date":          startPeriodTime,
-			"end_date":            startPeriodTime.AddDate(0, monthsDuration, 7),
+			"registration_id":        registration.ID.String(),
+			"user_id":                registration.UserID,
+			"academic_advisor_id":    registration.AcademicAdvisorID,
+			"academic_advisor_email": registration.AcademicAdvisorEmail,
+			"report_type":            "FINAL_REPORT",
+			"week":                   monthsDuration,
+			"start_date":             startPeriodTime,
+			"end_date":               startPeriodTime.AddDate(0, monthsDuration, 7),
 		}, "POST", token)
+
+		err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
 
 		if err != nil {
 			return err
 		}
+	}
+
+	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
+
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -227,13 +236,14 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 
 			// create report schedule
 			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-				"registration_id":     registration.ID.String(),
-				"user_id":             registration.UserID,
-				"academic_advisor_id": registration.AcademicAdvisorID,
-				"report_type":         "WEEKLY_REPORT",
-				"week":                week,
-				"start_date":          startDate,
-				"end_date":            endDate,
+				"registration_id":        registration.ID.String(),
+				"user_id":                registration.UserID,
+				"academic_advisor_id":    registration.AcademicAdvisorID,
+				"academic_advisor_email": registration.AcademicAdvisorEmail,
+				"report_type":            "WEEKLY_REPORT",
+				"week":                   week,
+				"start_date":             startDate,
+				"end_date":               endDate,
 			}, "POST", token)
 
 			if err != nil {
@@ -243,13 +253,14 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 
 		// create final report
 		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-			"registration_id":     registration.ID.String(),
-			"user_id":             registration.UserID,
-			"academic_advisor_id": registration.AcademicAdvisorID,
-			"report_type":         "FINAL_REPORT",
-			"week":                monthsDuration,
-			"start_date":          startPeriodTime,
-			"end_date":            startPeriodTime.AddDate(0, monthsDuration, 7),
+			"registration_id":        registration.ID.String(),
+			"user_id":                registration.UserID,
+			"academic_advisor_id":    registration.AcademicAdvisorID,
+			"academic_advisor_email": registration.AcademicAdvisorEmail,
+			"report_type":            "FINAL_REPORT",
+			"week":                   monthsDuration,
+			"start_date":             startPeriodTime,
+			"end_date":               startPeriodTime.AddDate(0, monthsDuration, 7),
 		}, "POST", token)
 
 		err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
