@@ -9,7 +9,7 @@ import (
 )
 
 func RegistrationRoutes(router *gin.Engine, programTypeController controller.RegistrationController, userService service.UserManagementService) {
-	registrationServiceRoute := router.Group("/registration-management/api")
+	registrationServiceRoute := router.Group("/registration-management/api/v1")
 	{
 		registrationRoutes := registrationServiceRoute.Group("/registration")
 		{

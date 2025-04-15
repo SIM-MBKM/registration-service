@@ -11,7 +11,7 @@ type ActivityManagementService struct {
 }
 
 const (
-	GET_ACTIVITIY_FILTER_ENDPOINT = "activity-management/api/activity/filter"
+	GET_ACTIVITIY_FILTER_ENDPOINT = "activity-management/api/v1/activity/filter"
 )
 
 func NewActivityManagementService(baseURI string, asyncURIs []string) *ActivityManagementService {
@@ -43,8 +43,10 @@ func (s *ActivityManagementService) GetActivitiesData(data map[string]interface{
 		}
 
 		activitiesData = append(activitiesData, map[string]interface{}{
-			"id":   activity["id"],
-			"name": activity["name"],
+			"id":              activity["id"],
+			"name":            activity["name"],
+			"start_period":    activity["start_period"],
+			"months_duration": activity["months_duration"],
 		})
 	}
 

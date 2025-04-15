@@ -10,7 +10,7 @@ type MatchingManagementService struct {
 
 const (
 	// MatchingManagementServiceBaseURI is the base URI for the matching management service
-	GET_MATCHING_BY_ACTIVITY_ID = "matching-management/api/matching/activity/"
+	GET_MATCHING_BY_ACTIVITY_ID = "matching-management/api/v1/matching/activity/"
 )
 
 func NewMatchingManagementService(baseURI string, asyncURIs []string) *MatchingManagementService {

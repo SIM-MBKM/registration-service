@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"mime/multipart"
 	"reflect"
 	"registration-service/dto"
 	"registration-service/entity"
 	"registration-service/helper"
 	"registration-service/repository"
+	"time"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
 	"github.com/google/uuid"
@@ -16,12 +18,13 @@ import (
 )
 
 type registrationService struct {
-	registrationRepository    repository.RegistrationRepository
-	documentRepository        repository.DocumentRepository
-	userManagementService     *UserManagementService
-	activityManagementService *ActivityManagementService
-	fileService               *FileService
-	matchingManagementService *MatchingManagementService
+	registrationRepository      repository.RegistrationRepository
+	documentRepository          repository.DocumentRepository
+	userManagementService       *UserManagementService
+	activityManagementService   *ActivityManagementService
+	fileService                 *FileService
+	matchingManagementService   *MatchingManagementService
+	monitoringManagementService *MonitoringManagementService
 }
 
 type RegistrationService interface {
@@ -39,14 +42,15 @@ type RegistrationService interface {
 	LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
-		registrationRepository:    registrationRepository,
-		documentRepository:        documentRepository,
-		userManagementService:     NewUserManagementService(userManagementbaseURI, asyncURIs),
-		activityManagementService: NewActivityManagementService(activityManagementbaseURI, asyncURIs),
-		matchingManagementService: NewMatchingManagementService(matchingManagementbaseURI, asyncURIs),
-		fileService:               NewFileService(config, tokenManager),
+		registrationRepository:      registrationRepository,
+		documentRepository:          documentRepository,
+		userManagementService:       NewUserManagementService(userManagementbaseURI, asyncURIs),
+		activityManagementService:   NewActivityManagementService(activityManagementbaseURI, asyncURIs),
+		matchingManagementService:   NewMatchingManagementService(matchingManagementbaseURI, asyncURIs),
+		monitoringManagementService: NewMonitoringManagementService(monitoringManagementbaseURI, asyncURIs),
+		fileService:                 NewFileService(config, tokenManager),
 	}
 }
 
@@ -84,6 +88,67 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		return err
 	}
 
+	if registration.ApprovalStatus == true {
+		// get activity data
+		activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
+			"activity_id": registration.ActivityID,
+		}, "GET", token)
+
+		// get user data
+		userData := s.userManagementService.GetUserData("GET", token)
+		if userData["id"] != registration.UserID {
+			return errors.New("Unauthorized")
+		}
+
+		// calculate how many times should upload the report schedule and week based on months_duration and start_period
+		monthsDuration := activityData[0]["months_duration"].(int)
+		startPeriod := activityData[0]["start_period"].(string)
+
+		// convert start_period to time
+		startPeriodTime, err := time.Parse("2006-01-02", startPeriod)
+		if err != nil {
+			return err
+		}
+
+		for i := 0; i < monthsDuration; i++ {
+			// create report schedule
+			// start_date
+			startDate := startPeriodTime.AddDate(0, 0, i*7)
+			endDate := startPeriodTime.AddDate(0, monthsDuration, 0)
+			week := i + 1
+
+			// create report schedule
+			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+				"registration_id":     registration.ID.String(),
+				"user_id":             registration.UserID,
+				"academic_advisor_id": registration.AcademicAdvisorID,
+				"report_type":         "WEEKLY_REPORT",
+				"week":                week,
+				"start_date":          startDate,
+				"end_date":            endDate,
+			}, "POST", token)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		// create final report
+		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+			"registration_id":     registration.ID.String(),
+			"user_id":             registration.UserID,
+			"academic_advisor_id": registration.AcademicAdvisorID,
+			"report_type":         "FINAL_REPORT",
+			"week":                monthsDuration,
+			"start_date":          startPeriodTime,
+			"end_date":            startPeriodTime.AddDate(0, monthsDuration, 7),
+		}, "POST", token)
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -92,13 +157,16 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 	if userEmail == "" {
 		return errors.New("Unauthorized")
 	}
+
 	registration, err := s.registrationRepository.FindByID(ctx, approval.ID, tx)
 
 	if err != nil {
+		log.Println("ERROR FIND REGISTRATION", err)
 		return err
 	}
 
 	if registration.AcademicAdvisorEmail != userEmail {
+		log.Println("UNAUTHORIZED")
 		return errors.New("Unauthorized")
 	}
 
@@ -123,7 +191,73 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		}
 	}
 
-	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
+	if registration.ApprovalStatus == true {
+		// get activity data
+		activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
+			"activity_id":     registration.ActivityID,
+			"program_type_id": "",
+			"level_id":        "",
+			"group_id":        "",
+			"name":            "",
+		}, "POST", token)
+
+		userData := s.userManagementService.GetUserData("GET", token)
+		if userData["id"] != registration.UserID {
+			return errors.New("Unauthorized")
+		}
+
+		// calculate how many times should upload the report schedule and week based on months_duration and start_period
+		monthsDuration := int(activityData[0]["months_duration"].(float64))
+
+		startPeriod := activityData[0]["start_period"].(string)
+
+		// convert start_period to time
+		startPeriodTime, err := time.Parse(time.RFC3339, startPeriod)
+		if err != nil {
+			log.Println("ERROR PARSE START PERIOD", err)
+			return err
+		}
+
+		for i := 0; i < monthsDuration; i++ {
+			// create report schedule
+			// start_date
+			startDate := startPeriodTime.AddDate(0, 0, i*7)
+			endDate := startPeriodTime.AddDate(0, monthsDuration, 0)
+			week := i + 1
+
+			// create report schedule
+			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+				"registration_id":     registration.ID.String(),
+				"user_id":             registration.UserID,
+				"academic_advisor_id": registration.AcademicAdvisorID,
+				"report_type":         "WEEKLY_REPORT",
+				"week":                week,
+				"start_date":          startDate,
+				"end_date":            endDate,
+			}, "POST", token)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		// create final report
+		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+			"registration_id":     registration.ID.String(),
+			"user_id":             registration.UserID,
+			"academic_advisor_id": registration.AcademicAdvisorID,
+			"report_type":         "FINAL_REPORT",
+			"week":                monthsDuration,
+			"start_date":          startPeriodTime,
+			"end_date":            startPeriodTime.AddDate(0, monthsDuration, 7),
+		}, "POST", token)
+
+		err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
+
+		if err != nil {
+			return err
+		}
+	}
 
 	if err != nil {
 		return err

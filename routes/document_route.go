@@ -7,7 +7,7 @@ import (
 )
 
 func DocumentRoutes(router *gin.Engine, documentController controller.DocumentController) {
-	documentServiceRoute := router.Group("/registration-management/api")
+	documentServiceRoute := router.Group("/registration-management/api/v1")
 	{
 		documentRoutes := documentServiceRoute.Group("/document")
 		{
