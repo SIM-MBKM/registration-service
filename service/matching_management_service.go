@@ -27,7 +27,7 @@ func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, m
 	return res["data"], nil
 }
 
-func (s *MatchingManagementService) GetMatchingByRegistrationID(registrationID string, method string, token string) (interface{}, error) {
+func (s *MatchingManagementService) GetEquivalentsByRegistrationID(registrationID string, method string, token string) (interface{}, error) {
 	res, err := s.baseService.Request(method, "matching-management/api/equivalent/registration/"+registrationID+"?noRecursion=1", nil, token)
 	if err != nil {
 		if err.Error() != "404 Not Found" {

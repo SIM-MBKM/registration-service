@@ -26,8 +26,9 @@ type (
 		Semester                  string             `json:"semester"`
 		TotalSKS                  int                `json:"total_sks"`
 		ActivityName              string             `json:"activity_name"`
+		ApprovalStatus            bool               `json:"approval_status"`
 		Documents                 []DocumentResponse `json:"documents"`
-		Matching                  interface{}        `json:"matching"`
+		Equivalents               interface{}        `json:"equivalents"`
 	}
 
 	FilterRegistrationRequest struct {

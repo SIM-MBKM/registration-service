@@ -314,6 +314,7 @@ func (s *registrationService) FindRegistrationByStudent(ctx context.Context, pag
 			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
 			Semester:                  registration.Semester,
 			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
 			Documents:                 convertToDocumentResponse(registration.Document),
 		})
 	}
@@ -354,6 +355,7 @@ func (s *registrationService) FindRegistrationByAdvisor(ctx context.Context, pag
 			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
 			Semester:                  registration.Semester,
 			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
 			Documents:                 convertToDocumentResponse(registration.Document),
 		})
 	}
@@ -524,6 +526,7 @@ func (s *registrationService) FindAllRegistrations(ctx context.Context, pagReq d
 			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
 			Semester:                  registration.Semester,
 			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
 			Documents:                 convertToDocumentResponse(registration.Document),
 		})
 	}
@@ -538,7 +541,7 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 	}
 
 	// get matching data
-	matchings, err := s.matchingManagementService.GetMatchingByRegistrationID(id, "GET", token)
+	equivalents, err := s.matchingManagementService.GetEquivalentsByRegistrationID(id, "GET", token)
 	if err != nil {
 		return dto.GetRegistrationResponse{}, err
 	}
@@ -564,8 +567,9 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 		AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
 		Semester:                  registration.Semester,
 		TotalSKS:                  registration.TotalSKS,
+		ApprovalStatus:            registration.ApprovalStatus,
 		Documents:                 convertToDocumentResponse(registration.Document),
-		Matching:                  matchings,
+		Equivalents:               equivalents,
 	}
 
 	return response, nil
