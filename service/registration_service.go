@@ -579,7 +579,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	var registrationEntity entity.Registration
 	var activitiesData []map[string]interface{}
 	var usersData []map[string]interface{}
-
+	var activitiesDataOld []map[string]interface{}
 	// get user data
 	userData := s.userManagementService.GetUserData("GET", token)
 	if userData == nil {
@@ -615,6 +615,48 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		}
 	} else {
 		return errors.New("Activity not found") // Default value if key doesn't exist or is nil
+	}
+
+	// get registration by activity_id and user_nrp
+	registrationByActivityIDAndNRP, err := s.registrationRepository.FindByActivityIDAndNRP(ctx, registration.ActivityID, userData["nrp"].(string), tx)
+	if err != nil {
+		return errors.New("data not found")
+	}
+
+	if registrationByActivityIDAndNRP.ActivityID == registration.ActivityID {
+		return errors.New("user already registered")
+	}
+
+	// get registration by user nrp and check the academic year (2024/2025)
+	// because user can only register in one semester of academic year (2024/2025)
+	// use
+	registrationsByNRP, err := s.registrationRepository.FindByNRP(ctx, userData["nrp"].(string), tx)
+	if err != nil {
+		return errors.New("data not found")
+	}
+
+	if registrationsByNRP.ActivityID == registration.ActivityID {
+		return errors.New("user already registered")
+	} else if registrationsByNRP.ActivityID != registration.ActivityID {
+		// get activity data by registrationsByNRP.ActivityID
+		if registrationsByNRP.ActivityID != "" {
+			activitiesDataOld = s.activityManagementService.GetActivitiesData(map[string]interface{}{
+				"activity_id":     registrationsByNRP.ActivityID,
+				"program_type_id": "",
+				"level_id":        "",
+				"group_id":        "",
+				"name":            "",
+			}, "POST", token)
+		}
+
+		activityOldStartDate := activitiesDataOld[0]["start_date"].(time.Time)
+		activityOldMonthsDuration := activitiesDataOld[0]["months_duration"].(int)
+		activityOldEndDate := activityOldStartDate.AddDate(0, activityOldMonthsDuration, 0)
+
+		// if activity new start date is after activity old end date then user can register
+		if !activitiesData[0]["start_date"].(time.Time).After(activityOldEndDate) {
+			return errors.New("user already registered")
+		}
 	}
 
 	var userID string

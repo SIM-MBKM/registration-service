@@ -23,10 +23,43 @@ type RegistrationRepository interface {
 	FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterRegistrationRequest) *gorm.DB
 	FindTotal(ctx context.Context, tx *gorm.DB) (int64, error)
 	FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error)
+	FindByNRP(ctx context.Context, nrp string, tx *gorm.DB) (entity.Registration, error)
+	FindByActivityIDAndNRP(ctx context.Context, activityID string, nrp string, tx *gorm.DB) (entity.Registration, error)
 }
 
 func NewRegistrationRepository(db *gorm.DB) RegistrationRepository {
 	return &registrationRepository{db: db, baseRepository: NewBaseRepository(db)}
+}
+
+func (r *registrationRepository) FindByActivityIDAndNRP(ctx context.Context, activityID string, nrp string, tx *gorm.DB) (entity.Registration, error) {
+	var registration entity.Registration
+	if tx == nil {
+		tx = r.db
+	}
+
+	err := tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("activity_id = ?", activityID).
+		Where("user_nrp = ?", nrp).
+		First(&registration).Error
+
+	return registration, err
+}
+
+func (r *registrationRepository) FindByNRP(ctx context.Context, nrp string, tx *gorm.DB) (entity.Registration, error) {
+	var registration entity.Registration
+	if tx == nil {
+		tx = r.db
+	}
+
+	err := tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("user_nrp = ?", nrp).
+		Order("created_at DESC").
+		// Where("academic_year = ?", academicYear).
+		First(&registration).Error
+
+	return registration, err
 }
 
 func (r *registrationRepository) FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error) {
