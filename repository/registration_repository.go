@@ -21,7 +21,7 @@ type RegistrationRepository interface {
 	FindByID(ctx context.Context, id string, tx *gorm.DB) (entity.Registration, error)
 	Destroy(ctx context.Context, id string, tx *gorm.DB) error
 	FilterSubQuery(ctx context.Context, tx *gorm.DB, filter dto.FilterRegistrationRequest) *gorm.DB
-	FindTotal(ctx context.Context, tx *gorm.DB) (int64, error)
+	FindTotal(ctx context.Context, filter dto.FilterRegistrationRequest, tx *gorm.DB) (int64, error)
 	FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error)
 	FindByNRP(ctx context.Context, nrp string, tx *gorm.DB) (entity.Registration, error)
 	FindByActivityIDAndNRP(ctx context.Context, activityID string, nrp string, tx *gorm.DB) (entity.Registration, error)
@@ -41,6 +41,7 @@ func (r *registrationRepository) FindByActivityIDAndNRP(ctx context.Context, act
 		Model(&entity.Registration{}).
 		Where("activity_id = ?", activityID).
 		Where("user_nrp = ?", nrp).
+		Order("created_at DESC").
 		First(&registration).Error
 
 	return registration, err
@@ -72,6 +73,7 @@ func (r *registrationRepository) FindRegistrationByAdvisiorEmail(ctx context.Con
 		Model(&entity.Registration{}).
 		Where("academic_advisor_email = ?", email).
 		Where("registrations.deleted_at IS NULL").
+		Order("created_at DESC").
 		First(&registration).Error
 
 	if err != nil {
@@ -81,15 +83,15 @@ func (r *registrationRepository) FindRegistrationByAdvisiorEmail(ctx context.Con
 	return registration, nil
 }
 
-func (r *registrationRepository) FindTotal(ctx context.Context, tx *gorm.DB) (int64, error) {
+func (r *registrationRepository) FindTotal(ctx context.Context, filter dto.FilterRegistrationRequest, tx *gorm.DB) (int64, error) {
 	var total int64
 	if tx == nil {
 		tx = r.db
 	}
-	err := tx.WithContext(ctx).
-		Model(&entity.Registration{}).
-		Where("registrations.deleted_at IS NULL").
-		Count(&total).Error
+
+	subQuery := r.FilterSubQuery(ctx, tx, filter)
+
+	err := subQuery.Count(&total).Error
 
 	if err != nil {
 		return 0, err
@@ -109,6 +111,7 @@ func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq 
 		Preload("Document").
 		Offset(pagReq.Offset).
 		Limit(pagReq.Limit).
+		Order("created_at DESC").
 		Where("registrations.deleted_at IS NULL").
 		Find(&registrations).Error
 
@@ -116,7 +119,7 @@ func (r *registrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq 
 		return nil, 0, err
 	}
 
-	total, err := r.FindTotal(ctx, tx)
+	total, err := r.FindTotal(ctx, filter, tx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -191,6 +194,7 @@ func (r *registrationRepository) FindByID(ctx context.Context, id string, tx *go
 		Preload("Document").
 		Model(&entity.Registration{}).
 		Where("id = ?", id).
+		Order("created_at DESC").
 		Where("registrations.deleted_at IS NULL").
 		First(&registration).Error
 
