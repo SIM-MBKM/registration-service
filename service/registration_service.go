@@ -120,6 +120,7 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
 				"registration_id":        registration.ID.String(),
 				"user_id":                registration.UserID,
+				"user_nrp":               registration.UserNRP,
 				"academic_advisor_id":    registration.AcademicAdvisorID,
 				"academic_advisor_email": registration.AcademicAdvisorEmail,
 				"report_type":            "WEEKLY_REPORT",
@@ -137,6 +138,7 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
 			"registration_id":        registration.ID.String(),
 			"user_id":                registration.UserID,
+			"user_nrp":               registration.UserNRP,
 			"academic_advisor_id":    registration.AcademicAdvisorID,
 			"academic_advisor_email": registration.AcademicAdvisorEmail,
 			"report_type":            "FINAL_REPORT",
@@ -238,6 +240,7 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
 				"registration_id":        registration.ID.String(),
 				"user_id":                registration.UserID,
+				"user_nrp":               registration.UserNRP,
 				"academic_advisor_id":    registration.AcademicAdvisorID,
 				"academic_advisor_email": registration.AcademicAdvisorEmail,
 				"report_type":            "WEEKLY_REPORT",
@@ -255,6 +258,7 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
 			"registration_id":        registration.ID.String(),
 			"user_id":                registration.UserID,
+			"user_nrp":               registration.UserNRP,
 			"academic_advisor_id":    registration.AcademicAdvisorID,
 			"academic_advisor_email": registration.AcademicAdvisorEmail,
 			"report_type":            "FINAL_REPORT",
