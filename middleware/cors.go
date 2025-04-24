@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,8 @@ func CORS() gin.HandlerFunc {
 			c.AbortWithStatus(204)
 			return
 		}
+
+		fmt.Println("AUTHORIZATION", c.Request.Header.Get("Authorization"))
 
 		c.Next()
 	}
