@@ -22,6 +22,7 @@ func NewActivityManagementService(baseURI string, asyncURIs []string) *ActivityM
 
 func (s *ActivityManagementService) GetActivitiesData(data map[string]interface{}, method string, token string) []map[string]interface{} {
 	res, err := s.baseService.Request(method, GET_ACTIVITIY_FILTER_ENDPOINT, data, token)
+
 	if err != nil {
 		return nil
 	}
@@ -47,6 +48,7 @@ func (s *ActivityManagementService) GetActivitiesData(data map[string]interface{
 			"name":            activity["name"],
 			"start_period":    activity["start_period"],
 			"months_duration": activity["months_duration"],
+			"approval_status": activity["approval_status"],
 		})
 	}
 

@@ -40,6 +40,9 @@ type RegistrationService interface {
 	ValidateStudent(ctx context.Context, token string, tx *gorm.DB) string
 	AdvisorRegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
 	LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error
+	GetRegistrationTranscript(ctx context.Context, id string, token string, tx *gorm.DB) (dto.TranscriptResponse, error)
+	GetStudentRegistrationsWithTranscripts(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentTranscriptsResponse, dto.PaginationResponse, error)
+	GetStudentRegistrationsWithSyllabuses(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentSyllabusesResponse, dto.PaginationResponse, error)
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -52,6 +55,77 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		monitoringManagementService: NewMonitoringManagementService(monitoringManagementbaseURI, asyncURIs),
 		fileService:                 NewFileService(config, tokenManager),
 	}
+}
+
+func (s *registrationService) createReportSchedules(ctx context.Context, registration entity.Registration, token string) error {
+	// get activity data
+	activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
+		"activity_id":     registration.ActivityID,
+		"program_type_id": "",
+		"level_id":        "",
+		"group_id":        "",
+		"name":            "",
+	}, "POST", token)
+
+	// calculate how many times should upload the report schedule and week based on months_duration and start_period
+	monthsDuration := int(activityData[0]["months_duration"].(float64))
+	startPeriod := activityData[0]["start_period"].(string)
+
+	// convert start_period to time
+	startPeriodTime, err := time.Parse(time.RFC3339, startPeriod)
+	if err != nil {
+		log.Println("ERROR PARSE START PERIOD", err)
+		return err
+	}
+
+	// Calculate total weeks (4 weeks per month)
+	totalWeeks := monthsDuration * 4
+
+	// Create weekly report schedules
+	for week := 1; week <= totalWeeks; week++ {
+		// Calculate start and end dates for each week
+		startDate := startPeriodTime.AddDate(0, 0, (week-1)*7)
+		endDate := startDate.AddDate(0, 0, 6) // 6 days after start date
+
+		// create report schedule
+		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+			"registration_id":        registration.ID.String(),
+			"user_id":                registration.UserID,
+			"user_nrp":               registration.UserNRP,
+			"academic_advisor_id":    registration.AcademicAdvisorID,
+			"academic_advisor_email": registration.AcademicAdvisorEmail,
+			"report_type":            "WEEKLY_REPORT",
+			"week":                   week,
+			"start_date":             startDate,
+			"end_date":               endDate,
+		}, "POST", token)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create final report schedule
+	finalReportStartDate := startPeriodTime
+	finalReportEndDate := startPeriodTime.AddDate(0, monthsDuration, 0)
+
+	err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
+		"registration_id":        registration.ID.String(),
+		"user_id":                registration.UserID,
+		"user_nrp":               registration.UserNRP,
+		"academic_advisor_id":    registration.AcademicAdvisorID,
+		"academic_advisor_email": registration.AcademicAdvisorEmail,
+		"report_type":            "FINAL_REPORT",
+		"week":                   totalWeeks,
+		"start_date":             finalReportStartDate,
+		"end_date":               finalReportEndDate,
+	}, "POST", token)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *registrationService) LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
@@ -73,6 +147,11 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		registration.LOValidation = "APPROVED"
 		if registration.AcademicAdvisorValidation == "APPROVED" {
 			registration.ApprovalStatus = true
+			// Create report schedules when both validations are approved
+			err = s.createReportSchedules(ctx, registration, token)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if approval.Status == "REJECTED" {
@@ -82,80 +161,7 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		}
 	}
 
-	if registration.ApprovalStatus == true {
-		// get activity data
-		activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
-			"activity_id":     registration.ActivityID,
-			"program_type_id": "",
-			"level_id":        "",
-			"group_id":        "",
-			"name":            "",
-		}, "POST", token)
-
-		userData := s.userManagementService.GetUserData("GET", token)
-		if userData["id"] != registration.UserID {
-			return errors.New("Unauthorized")
-		}
-
-		// calculate how many times should upload the report schedule and week based on months_duration and start_period
-		monthsDuration := int(activityData[0]["months_duration"].(float64))
-
-		startPeriod := activityData[0]["start_period"].(string)
-
-		// convert start_period to time
-		startPeriodTime, err := time.Parse(time.RFC3339, startPeriod)
-		if err != nil {
-			log.Println("ERROR PARSE START PERIOD", err)
-			return err
-		}
-
-		for i := 0; i < monthsDuration; i++ {
-			// create report schedule
-			// start_date
-			startDate := startPeriodTime.AddDate(0, 0, i*7)
-			endDate := startPeriodTime.AddDate(0, monthsDuration, 0)
-			week := i + 1
-
-			// create report schedule
-			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-				"registration_id":        registration.ID.String(),
-				"user_id":                registration.UserID,
-				"user_nrp":               registration.UserNRP,
-				"academic_advisor_id":    registration.AcademicAdvisorID,
-				"academic_advisor_email": registration.AcademicAdvisorEmail,
-				"report_type":            "WEEKLY_REPORT",
-				"week":                   week,
-				"start_date":             startDate,
-				"end_date":               endDate,
-			}, "POST", token)
-
-			if err != nil {
-				return err
-			}
-		}
-
-		// create final report
-		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-			"registration_id":        registration.ID.String(),
-			"user_id":                registration.UserID,
-			"user_nrp":               registration.UserNRP,
-			"academic_advisor_id":    registration.AcademicAdvisorID,
-			"academic_advisor_email": registration.AcademicAdvisorEmail,
-			"report_type":            "FINAL_REPORT",
-			"week":                   monthsDuration,
-			"start_date":             startPeriodTime,
-			"end_date":               startPeriodTime.AddDate(0, monthsDuration, 7),
-		}, "POST", token)
-
-		err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-
-		if err != nil {
-			return err
-		}
-	}
-
 	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-
 	if err != nil {
 		return err
 	}
@@ -193,6 +199,11 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		registration.AcademicAdvisorValidation = "APPROVED"
 		if registration.LOValidation == "APPROVED" {
 			registration.ApprovalStatus = true
+			// Create report schedules when both validations are approved
+			err = s.createReportSchedules(ctx, registration, token)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if approval.Status == "REJECTED" {
@@ -202,78 +213,7 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		}
 	}
 
-	if registration.ApprovalStatus == true {
-		// get activity data
-		activityData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
-			"activity_id":     registration.ActivityID,
-			"program_type_id": "",
-			"level_id":        "",
-			"group_id":        "",
-			"name":            "",
-		}, "POST", token)
-
-		userData := s.userManagementService.GetUserData("GET", token)
-		if userData["id"] != registration.UserID {
-			return errors.New("Unauthorized")
-		}
-
-		// calculate how many times should upload the report schedule and week based on months_duration and start_period
-		monthsDuration := int(activityData[0]["months_duration"].(float64))
-
-		startPeriod := activityData[0]["start_period"].(string)
-
-		// convert start_period to time
-		startPeriodTime, err := time.Parse(time.RFC3339, startPeriod)
-		if err != nil {
-			log.Println("ERROR PARSE START PERIOD", err)
-			return err
-		}
-
-		for i := 0; i < monthsDuration; i++ {
-			// create report schedule
-			// start_date
-			startDate := startPeriodTime.AddDate(0, 0, i*7)
-			endDate := startPeriodTime.AddDate(0, monthsDuration, 0)
-			week := i + 1
-
-			// create report schedule
-			err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-				"registration_id":        registration.ID.String(),
-				"user_id":                registration.UserID,
-				"user_nrp":               registration.UserNRP,
-				"academic_advisor_id":    registration.AcademicAdvisorID,
-				"academic_advisor_email": registration.AcademicAdvisorEmail,
-				"report_type":            "WEEKLY_REPORT",
-				"week":                   week,
-				"start_date":             startDate,
-				"end_date":               endDate,
-			}, "POST", token)
-
-			if err != nil {
-				return err
-			}
-		}
-
-		// create final report
-		err = s.monitoringManagementService.CreateReportSchedule(map[string]interface{}{
-			"registration_id":        registration.ID.String(),
-			"user_id":                registration.UserID,
-			"user_nrp":               registration.UserNRP,
-			"academic_advisor_id":    registration.AcademicAdvisorID,
-			"academic_advisor_email": registration.AcademicAdvisorEmail,
-			"report_type":            "FINAL_REPORT",
-			"week":                   monthsDuration,
-			"start_date":             startPeriodTime,
-			"end_date":               startPeriodTime.AddDate(0, monthsDuration, 7),
-		}, "POST", token)
-
-		err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-
-		if err != nil {
-			return err
-		}
-	}
-
+	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
 	if err != nil {
 		return err
 	}
@@ -299,12 +239,17 @@ func (s *registrationService) FindRegistrationByStudent(ctx context.Context, pag
 
 	var response []dto.GetRegistrationResponse
 	for _, registration := range registrations {
+		equivalents, err := s.matchingManagementService.GetEquivalentsByRegistrationID(registration.ID.String(), "GET", token)
+		if err != nil {
+			return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+		}
 		response = append(response, dto.GetRegistrationResponse{
 			ID:                        registration.ID.String(),
 			ActivityID:                registration.ActivityID,
 			ActivityName:              registration.ActivityName,
 			UserID:                    registration.UserID,
 			UserNRP:                   registration.UserNRP,
+			UserName:                  registration.UserName,
 			AdvisingConfirmation:      registration.AdvisingConfirmation,
 			AcademicAdvisor:           registration.AcademicAdvisor,
 			AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
@@ -316,6 +261,7 @@ func (s *registrationService) FindRegistrationByStudent(ctx context.Context, pag
 			TotalSKS:                  registration.TotalSKS,
 			ApprovalStatus:            registration.ApprovalStatus,
 			Documents:                 convertToDocumentResponse(registration.Document),
+			Equivalents:               equivalents,
 		})
 	}
 
@@ -596,6 +542,15 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		}, "POST", token)
 	}
 
+	approvalStatus, ok := activitiesData[0]["approval_status"].(string)
+	if !ok {
+		return errors.New("approval status not found")
+	}
+
+	if approvalStatus != "APPROVED" {
+		return errors.New("this activity is not open for registration")
+	}
+
 	if userData["id"] != "" {
 		usersData = s.userManagementService.GetUserByFilter(map[string]interface{}{
 			"user_id": userData["id"],
@@ -620,7 +575,9 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	// get registration by activity_id and user_nrp
 	registrationByActivityIDAndNRP, err := s.registrationRepository.FindByActivityIDAndNRP(ctx, registration.ActivityID, userData["nrp"].(string), tx)
 	if err != nil {
-		return errors.New("data not found")
+		if err.Error() != "record not found" {
+			return errors.New("error getting registration by activity_id and user_nrp")
+		}
 	}
 
 	if registrationByActivityIDAndNRP.ActivityID == registration.ActivityID {
@@ -637,7 +594,8 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 
 	if registrationsByNRP.ActivityID == registration.ActivityID {
 		return errors.New("user already registered")
-	} else if registrationsByNRP.ActivityID != registration.ActivityID {
+	} else if registrationsByNRP.ActivityID != registration.ActivityID && registrationsByNRP.ActivityID != "" {
+		log.Println("REGISTRATION EXISTS BUT DIFFERENT ACTIVITY ID", registrationsByNRP.ActivityID, registration.ActivityID)
 		// get activity data by registrationsByNRP.ActivityID
 		if registrationsByNRP.ActivityID != "" {
 			activitiesDataOld = s.activityManagementService.GetActivitiesData(map[string]interface{}{
@@ -647,15 +605,76 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 				"group_id":        "",
 				"name":            "",
 			}, "POST", token)
+			log.Println("ACTIVITIES DATA OLD", activitiesDataOld)
 		}
 
-		activityOldStartDate := activitiesDataOld[0]["start_date"].(time.Time)
-		activityOldMonthsDuration := activitiesDataOld[0]["months_duration"].(int)
+		// Check if activitiesDataOld has valid data
+		if len(activitiesDataOld) == 0 {
+			return errors.New("old activity data not found")
+		}
+
+		// Safely parse the old activity start date and duration
+		var activityOldStartDate time.Time
+		var activityOldMonthsDuration int
+
+		// Handle start_date - could be string or another format
+		if startDateVal, ok := activitiesDataOld[0]["start_period"]; ok && startDateVal != nil {
+			// Try to parse as RFC3339 if it's a string
+			if startDateStr, ok := startDateVal.(string); ok {
+				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+				if err != nil {
+					return errors.New("invalid start_period format in old activity")
+				}
+				activityOldStartDate = parsedTime
+			} else if startDate, ok := startDateVal.(time.Time); ok {
+				// It's already a time.Time
+				activityOldStartDate = startDate
+			} else {
+				return errors.New("invalid start_period type in old activity")
+			}
+		} else {
+			return errors.New("start_period not found in old activity")
+		}
+
+		// Handle months_duration - could be float64 or int
+		if durationVal, ok := activitiesDataOld[0]["months_duration"]; ok && durationVal != nil {
+			switch v := durationVal.(type) {
+			case int:
+				activityOldMonthsDuration = v
+			case float64:
+				activityOldMonthsDuration = int(v)
+			default:
+				return errors.New("invalid months_duration type in old activity")
+			}
+		} else {
+			return errors.New("months_duration not found in old activity")
+		}
+
 		activityOldEndDate := activityOldStartDate.AddDate(0, activityOldMonthsDuration, 0)
 
+		// Similarly handle start_date for the new activity
+		var activityNewStartDate time.Time
+		if startDateVal, ok := activitiesData[0]["start_period"]; ok && startDateVal != nil {
+			// Try to parse as RFC3339 if it's a string
+			if startDateStr, ok := startDateVal.(string); ok {
+				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+				if err != nil {
+					return errors.New("invalid start_period format in new activity")
+				}
+				activityNewStartDate = parsedTime
+			} else if startDate, ok := startDateVal.(time.Time); ok {
+				// It's already a time.Time
+				activityNewStartDate = startDate
+			} else {
+				return errors.New("invalid start_period type in new activity")
+			}
+		} else {
+			return errors.New("start_period not found in new activity")
+		}
+
 		// if activity new start date is after activity old end date then user can register
-		if !activitiesData[0]["start_date"].(time.Time).After(activityOldEndDate) {
-			return errors.New("user already registered")
+		if !activityNewStartDate.After(activityOldEndDate) {
+			return errors.New("user already registered for an overlapping activity period")
 		}
 	}
 
@@ -851,4 +870,172 @@ func convertToDocumentResponse(documents []entity.Document) []dto.DocumentRespon
 		})
 	}
 	return documentResponses
+}
+
+func (s *registrationService) GetRegistrationTranscript(ctx context.Context, id string, token string, tx *gorm.DB) (dto.TranscriptResponse, error) {
+	// Check if the user has access to this registration
+	access := s.RegistrationsDataAccess(ctx, id, token, tx)
+	if !access {
+		return dto.TranscriptResponse{}, errors.New("data not found")
+	}
+
+	// Get registration data
+	registration, err := s.registrationRepository.FindByID(ctx, id, tx)
+	if err != nil {
+		return dto.TranscriptResponse{}, err
+	}
+
+	// Check if registration is approved
+	if !registration.ApprovalStatus {
+		return dto.TranscriptResponse{}, errors.New("registration is not approved")
+	}
+
+	// Get transcript data from monitoring service
+	transcriptData, err := s.monitoringManagementService.GetTranscriptByRegistrationID(id, token)
+	if err != nil {
+		return dto.TranscriptResponse{}, err
+	}
+
+	// Create response
+	response := dto.TranscriptResponse{
+		RegistrationID: registration.ID.String(),
+		UserID:         registration.UserID,
+		UserNRP:        registration.UserNRP,
+		UserName:       registration.UserName,
+		ActivityName:   registration.ActivityName,
+		Semester:       registration.Semester,
+		TotalSKS:       registration.TotalSKS,
+		ApprovalStatus: registration.ApprovalStatus,
+		TranscriptData: transcriptData,
+	}
+
+	return response, nil
+}
+
+func (s *registrationService) GetStudentRegistrationsWithTranscripts(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentTranscriptsResponse, dto.PaginationResponse, error) {
+	// Validate student authentication and get NRP
+	userNRP := s.ValidateStudent(ctx, token, tx)
+	if userNRP == "" {
+		return dto.StudentTranscriptsResponse{}, dto.PaginationResponse{}, errors.New("Unauthorized")
+	}
+
+	// Get user data
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return dto.StudentTranscriptsResponse{}, dto.PaginationResponse{}, errors.New("User data not found")
+	}
+
+	// Set filter for this student
+	filter.UserNRP = userNRP
+
+	// Get all student registrations
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return dto.StudentTranscriptsResponse{}, dto.PaginationResponse{}, err
+	}
+
+	// Create pagination metadata
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	// Prepare the response
+	response := dto.StudentTranscriptsResponse{
+		UserID:   userData["id"].(string),
+		UserNRP:  userNRP,
+		UserName: userData["name"].(string),
+	}
+
+	// Process each registration to fetch transcript data
+	var studentTranscripts []dto.StudentTranscriptResponse
+	for _, registration := range registrations {
+		var transcriptData interface{} = nil
+
+		// Only fetch transcript data if registration is approved
+		if registration.ApprovalStatus {
+			// Try to get transcript data
+			transcriptData, err = s.monitoringManagementService.GetTranscriptByRegistrationID(registration.ID.String(), token)
+			if err != nil {
+				// Just log the error and continue, don't fail the whole request
+				log.Printf("Error fetching transcript for registration %s: %v", registration.ID.String(), err)
+			}
+		}
+
+		studentTranscripts = append(studentTranscripts, dto.StudentTranscriptResponse{
+			RegistrationID:            registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			TranscriptData:            transcriptData,
+		})
+	}
+
+	response.Registrations = studentTranscripts
+	return response, metaData, nil
+}
+
+func (s *registrationService) GetStudentRegistrationsWithSyllabuses(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentSyllabusesResponse, dto.PaginationResponse, error) {
+	// Validate student authentication and get NRP
+	userNRP := s.ValidateStudent(ctx, token, tx)
+	if userNRP == "" {
+		return dto.StudentSyllabusesResponse{}, dto.PaginationResponse{}, errors.New("Unauthorized")
+	}
+
+	// Get user data
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return dto.StudentSyllabusesResponse{}, dto.PaginationResponse{}, errors.New("User data not found")
+	}
+
+	// Set filter for this student
+	filter.UserNRP = userNRP
+
+	// Get all student registrations
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return dto.StudentSyllabusesResponse{}, dto.PaginationResponse{}, err
+	}
+
+	// Create pagination metadata
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	// Prepare the response
+	response := dto.StudentSyllabusesResponse{
+		UserID:   userData["id"].(string),
+		UserNRP:  userNRP,
+		UserName: userData["name"].(string),
+	}
+
+	// Process each registration to fetch transcript data
+	var studentSyllabuses []dto.StudentSyllabusResponse
+	for _, registration := range registrations {
+		var syllabusData interface{} = nil
+
+		// Only fetch transcript data if registration is approved
+		if registration.ApprovalStatus {
+			// Try to get transcript data
+			syllabusData, err = s.monitoringManagementService.GetSyllabusByRegistrationID(registration.ID.String(), token)
+			if err != nil {
+				// Just log the error and continue, don't fail the whole request
+				log.Printf("Error fetching transcript for registration %s: %v", registration.ID.String(), err)
+			}
+		}
+
+		studentSyllabuses = append(studentSyllabuses, dto.StudentSyllabusResponse{
+			RegistrationID:            registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			SyllabusData:              syllabusData,
+		})
+	}
+
+	response.Registrations = studentSyllabuses
+	return response, metaData, nil
 }

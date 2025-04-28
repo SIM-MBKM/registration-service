@@ -9,18 +9,18 @@ import (
 )
 
 func RegistrationRoutes(router *gin.Engine, programTypeController controller.RegistrationController, userService service.UserManagementService) {
-	registrationServiceRoute := router.Group("/registration-management/api/v1")
+	registrationServiceRoute := router.Group("/registration-management/api/v1/registration")
 	{
-		registrationRoutes := registrationServiceRoute.Group("/registration")
-		{
-			registrationRoutes.POST("/all", middleware.AuthorizationRole(userService, []string{"ADMIN", "LO-MBKM"}), programTypeController.GetAllRegistrations)
-			registrationRoutes.GET("/:id", programTypeController.GetRegistrationByID)
-			registrationRoutes.POST("/", programTypeController.CreateRegistration)
-			registrationRoutes.PUT("/:id", programTypeController.UpdateRegistration)
-			registrationRoutes.DELETE("/:id", programTypeController.DeleteRegistration)
-			registrationRoutes.POST("/advisor", middleware.AuthorizationRole(userService, []string{"DOSEN PEMBIMBING"}), programTypeController.GetRegistrationsByAdvisor)
-			registrationRoutes.POST("/student", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetRegistrationsByStudent)
-			registrationRoutes.POST("/approval", middleware.AuthorizationRole(userService, []string{"ADMIN", "LO-MBKM", "DOSEN PEMBIMBING"}), programTypeController.ApproveRegistration)
-		}
+		registrationServiceRoute.POST("/all", middleware.AuthorizationRole(userService, []string{"ADMIN", "LO-MBKM"}), programTypeController.GetAllRegistrations)
+		registrationServiceRoute.GET("/:id", programTypeController.GetRegistrationByID)
+		registrationServiceRoute.POST("", programTypeController.CreateRegistration)
+		registrationServiceRoute.PUT("/:id", programTypeController.UpdateRegistration)
+		registrationServiceRoute.DELETE("/:id", programTypeController.DeleteRegistration)
+		registrationServiceRoute.POST("/advisor", middleware.AuthorizationRole(userService, []string{"DOSEN PEMBIMBING"}), programTypeController.GetRegistrationsByAdvisor)
+		registrationServiceRoute.POST("/student", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetRegistrationsByStudent)
+		registrationServiceRoute.POST("/approval", middleware.AuthorizationRole(userService, []string{"ADMIN", "LO-MBKM", "DOSEN PEMBIMBING"}), programTypeController.ApproveRegistration)
+		registrationServiceRoute.GET("/:id/transcript", programTypeController.GetRegistrationTranscript)
+		registrationServiceRoute.POST("/student/transcripts", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetStudentRegistrationsWithTranscripts)
+		registrationServiceRoute.POST("/student/syllabuses", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetStudentRegistrationsWithSyllabuses)
 	}
 }

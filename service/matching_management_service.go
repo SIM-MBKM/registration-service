@@ -20,7 +20,7 @@ func NewMatchingManagementService(baseURI string, asyncURIs []string) *MatchingM
 }
 
 func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, method string, token string) (interface{}, error) {
-	res, err := s.baseService.Request(method, "matching-management/api/matching/activity/"+activityID, nil, token)
+	res, err := s.baseService.Request(method, "matching-management/api/v1/matching/activity/"+activityID, nil, token)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, m
 }
 
 func (s *MatchingManagementService) GetEquivalentsByRegistrationID(registrationID string, method string, token string) (interface{}, error) {
-	res, err := s.baseService.Request(method, "matching-management/api/equivalent/registration/"+registrationID+"?noRecursion=1", nil, token)
+	res, err := s.baseService.Request(method, "matching-management/api/v1/equivalent/registration/"+registrationID+"?noRecursion=1", nil, token)
 	if err != nil {
 		if err.Error() != "404 Not Found" {
 			return nil, err

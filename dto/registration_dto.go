@@ -1,12 +1,13 @@
 package dto
 
 const (
-	MESSAGE_REGISTRATION_GET_ALL_SUCCESS = "Get all activities success"
-	MESSAGE_REGISTRATION_GET_SUCCESS     = "Get registration success"
-	MESSAGE_REGISTRATION_CREATE_SUCCESS  = "Create registration success"
-	MESSAGE_REGISTRATION_UPDATE_SUCCESS  = "Update registration success"
-	MESSAGE_REGISTRATION_DELETE_SUCCESS  = "Delete registration success"
-	MESSAGE_REGISTRATION_UPDATE_ERROR    = "Update registration failed"
+	MESSAGE_REGISTRATION_GET_ALL_SUCCESS    = "Get all activities success"
+	MESSAGE_REGISTRATION_GET_SUCCESS        = "Get registration success"
+	MESSAGE_REGISTRATION_CREATE_SUCCESS     = "Create registration success"
+	MESSAGE_REGISTRATION_UPDATE_SUCCESS     = "Update registration success"
+	MESSAGE_REGISTRATION_DELETE_SUCCESS     = "Delete registration success"
+	MESSAGE_REGISTRATION_UPDATE_ERROR       = "Update registration failed"
+	MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS = "Get registration transcript success"
 )
 
 type (
@@ -75,5 +76,55 @@ type (
 		MentorEmail          string `json:"mentor_email"`
 		Semester             string `json:"semester"`
 		TotalSKS             int    `json:"total_sks"`
+	}
+
+	TranscriptResponse struct {
+		RegistrationID string      `json:"registration_id"`
+		UserID         string      `json:"user_id"`
+		UserNRP        string      `json:"user_nrp"`
+		UserName       string      `json:"user_name"`
+		ActivityName   string      `json:"activity_name"`
+		Semester       string      `json:"semester"`
+		TotalSKS       int         `json:"total_sks"`
+		ApprovalStatus bool        `json:"approval_status"`
+		TranscriptData interface{} `json:"transcript_data"`
+	}
+
+	StudentTranscriptResponse struct {
+		RegistrationID            string      `json:"registration_id"`
+		ActivityID                string      `json:"activity_id"`
+		ActivityName              string      `json:"activity_name"`
+		Semester                  string      `json:"semester"`
+		TotalSKS                  int         `json:"total_sks"`
+		ApprovalStatus            bool        `json:"approval_status"`
+		LOValidation              string      `json:"lo_validation"`
+		AcademicAdvisorValidation string      `json:"academic_advisor_validation"`
+		TranscriptData            interface{} `json:"transcript_data"`
+	}
+
+	StudentSyllabusResponse struct {
+		RegistrationID            string      `json:"registration_id"`
+		ActivityID                string      `json:"activity_id"`
+		ActivityName              string      `json:"activity_name"`
+		Semester                  string      `json:"semester"`
+		TotalSKS                  int         `json:"total_sks"`
+		ApprovalStatus            bool        `json:"approval_status"`
+		LOValidation              string      `json:"lo_validation"`
+		AcademicAdvisorValidation string      `json:"academic_advisor_validation"`
+		SyllabusData              interface{} `json:"syllabus_data"`
+	}
+
+	StudentTranscriptsResponse struct {
+		UserID        string                      `json:"user_id"`
+		UserNRP       string                      `json:"user_nrp"`
+		UserName      string                      `json:"user_name"`
+		Registrations []StudentTranscriptResponse `json:"registrations"`
+	}
+
+	StudentSyllabusesResponse struct {
+		UserID        string                    `json:"user_id"`
+		UserNRP       string                    `json:"user_nrp"`
+		UserName      string                    `json:"user_name"`
+		Registrations []StudentSyllabusResponse `json:"registrations"`
 	}
 )
