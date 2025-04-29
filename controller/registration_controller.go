@@ -25,6 +25,7 @@ type RegistrationController interface {
 	GetRegistrationTranscript(ctx *gin.Context)
 	GetStudentRegistrationsWithTranscripts(ctx *gin.Context)
 	GetStudentRegistrationsWithSyllabuses(ctx *gin.Context)
+	GetStudentRegistrationsWithMatching(ctx *gin.Context)
 }
 
 func NewRegistrationController(registrationService service.RegistrationService) RegistrationController {
@@ -488,6 +489,46 @@ func (c *registrationController) GetStudentRegistrationsWithSyllabuses(ctx *gin.
 		Message:            dto.MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS,
 		Status:             dto.STATUS_SUCCESS,
 		Data:               transcripts,
+		PaginationResponse: &metaData,
+	})
+}
+
+func (c *registrationController) GetStudentRegistrationsWithMatching(ctx *gin.Context) {
+	var request dto.FilterRegistrationRequest
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// get header token
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	pagReq := helper.Pagination(ctx)
+	registrations, metaData, err := c.registrationService.FindRegistrationsWithMatching(ctx, pagReq, request, token, nil)
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.Response{
+		Message:            dto.MESSAGE_REGISTRATION_MATCHING_SUCCESS,
+		Status:             dto.STATUS_SUCCESS,
+		Data:               registrations,
 		PaginationResponse: &metaData,
 	})
 }

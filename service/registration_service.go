@@ -43,6 +43,7 @@ type RegistrationService interface {
 	GetRegistrationTranscript(ctx context.Context, id string, token string, tx *gorm.DB) (dto.TranscriptResponse, error)
 	GetStudentRegistrationsWithTranscripts(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentTranscriptsResponse, dto.PaginationResponse, error)
 	GetStudentRegistrationsWithSyllabuses(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentSyllabusesResponse, dto.PaginationResponse, error)
+	FindRegistrationsWithMatching(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentRegistrationsWithMatchingResponse, dto.PaginationResponse, error)
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -129,41 +130,44 @@ func (s *registrationService) createReportSchedules(ctx context.Context, registr
 }
 
 func (s *registrationService) LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
-	registration, err := s.registrationRepository.FindByID(ctx, approval.ID, tx)
+	for _, id := range approval.ID {
+		registration, err := s.registrationRepository.FindByID(ctx, id, tx)
 
-	if err != nil {
-		return err
-	}
+		if err != nil {
+			return err
+		}
 
-	if registration.LOValidation == "APPROVED" && approval.Status == "APPROVED" {
-		return errors.New("Registration already approved")
-	}
+		if registration.LOValidation == "APPROVED" && approval.Status == "APPROVED" {
+			return errors.New("Registration already approved")
+		}
 
-	if registration.LOValidation == "REJECTED" && approval.Status == "REJECTED" {
-		return errors.New("Registration already rejected")
-	}
+		if registration.LOValidation == "REJECTED" && approval.Status == "REJECTED" {
+			return errors.New("Registration already rejected")
+		}
 
-	if approval.Status == "APPROVED" {
-		registration.LOValidation = "APPROVED"
-		if registration.AcademicAdvisorValidation == "APPROVED" {
-			registration.ApprovalStatus = true
-			// Create report schedules when both validations are approved
-			err = s.createReportSchedules(ctx, registration, token)
-			if err != nil {
-				return err
+		if approval.Status == "APPROVED" {
+			registration.LOValidation = "APPROVED"
+			if registration.AcademicAdvisorValidation == "APPROVED" {
+				registration.ApprovalStatus = true
+				// Create report schedules when both validations are approved
+				err = s.createReportSchedules(ctx, registration, token)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
-	if approval.Status == "REJECTED" {
-		registration.LOValidation = "REJECTED"
-		if registration.AcademicAdvisorValidation == "REJECTED" {
-			registration.ApprovalStatus = false
+		if approval.Status == "REJECTED" {
+			registration.LOValidation = "REJECTED"
+			if registration.AcademicAdvisorValidation == "REJECTED" {
+				registration.ApprovalStatus = false
+			}
 		}
-	}
 
-	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-	if err != nil {
-		return err
+		err = s.registrationRepository.Update(ctx, id, registration, tx)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
@@ -175,47 +179,50 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		return errors.New("Unauthorized")
 	}
 
-	registration, err := s.registrationRepository.FindByID(ctx, approval.ID, tx)
+	for _, id := range approval.ID {
+		registration, err := s.registrationRepository.FindByID(ctx, id, tx)
 
-	if err != nil {
-		log.Println("ERROR FIND REGISTRATION", err)
-		return err
-	}
+		if err != nil {
+			log.Println("ERROR FIND REGISTRATION", err)
+			return err
+		}
 
-	if registration.AcademicAdvisorEmail != userEmail {
-		log.Println("UNAUTHORIZED")
-		return errors.New("Unauthorized")
-	}
+		if registration.AcademicAdvisorEmail != userEmail {
+			log.Println("UNAUTHORIZED")
+			return errors.New("Unauthorized")
+		}
 
-	if registration.AcademicAdvisorValidation == "APPROVED" && approval.Status == "APPROVED" {
-		return errors.New("Registration already approved")
-	}
+		if registration.AcademicAdvisorValidation == "APPROVED" && approval.Status == "APPROVED" {
+			return errors.New("Registration already approved")
+		}
 
-	if registration.AcademicAdvisorValidation == "REJECTED" && approval.Status == "REJECTED" {
-		return errors.New("Registration already rejected")
-	}
+		if registration.AcademicAdvisorValidation == "REJECTED" && approval.Status == "REJECTED" {
+			return errors.New("Registration already rejected")
+		}
 
-	if approval.Status == "APPROVED" {
-		registration.AcademicAdvisorValidation = "APPROVED"
-		if registration.LOValidation == "APPROVED" {
-			registration.ApprovalStatus = true
-			// Create report schedules when both validations are approved
-			err = s.createReportSchedules(ctx, registration, token)
-			if err != nil {
-				return err
+		if approval.Status == "APPROVED" {
+			registration.AcademicAdvisorValidation = "APPROVED"
+			if registration.LOValidation == "APPROVED" {
+				registration.ApprovalStatus = true
+				// Create report schedules when both validations are approved
+				err = s.createReportSchedules(ctx, registration, token)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
-	if approval.Status == "REJECTED" {
-		registration.AcademicAdvisorValidation = "REJECTED"
-		if registration.LOValidation == "REJECTED" {
-			registration.ApprovalStatus = false
+		if approval.Status == "REJECTED" {
+			registration.AcademicAdvisorValidation = "REJECTED"
+			if registration.LOValidation == "REJECTED" {
+				registration.ApprovalStatus = false
+			}
 		}
-	}
 
-	err = s.registrationRepository.Update(ctx, approval.ID, registration, tx)
-	if err != nil {
-		return err
+		err = s.registrationRepository.Update(ctx, id, registration, tx)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil
@@ -1037,5 +1044,81 @@ func (s *registrationService) GetStudentRegistrationsWithSyllabuses(ctx context.
 	}
 
 	response.Registrations = studentSyllabuses
+	return response, metaData, nil
+}
+
+func (s *registrationService) FindRegistrationsWithMatching(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentRegistrationsWithMatchingResponse, dto.PaginationResponse, error) {
+	// Validate student authentication and get NRP
+	userNRP := s.ValidateStudent(ctx, token, tx)
+	if userNRP == "" {
+		return dto.StudentRegistrationsWithMatchingResponse{}, dto.PaginationResponse{}, errors.New("Unauthorized")
+	}
+
+	// Get user data
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return dto.StudentRegistrationsWithMatchingResponse{}, dto.PaginationResponse{}, errors.New("User data not found")
+	}
+
+	// Set filter for this student
+	filter.UserNRP = userNRP
+
+	// Get all student registrations
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return dto.StudentRegistrationsWithMatchingResponse{}, dto.PaginationResponse{}, err
+	}
+
+	// Create pagination metadata
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	// Prepare the response
+	response := dto.StudentRegistrationsWithMatchingResponse{
+		UserID:   userData["id"].(string),
+		UserNRP:  userNRP,
+		UserName: userData["name"].(string),
+	}
+
+	// Process each registration to fetch matching data
+	var studentRegistrations []dto.StudentRegistrationWithMatchingResponse
+	for _, registration := range registrations {
+		// Get equivalents data
+		equivalents, err := s.matchingManagementService.GetEquivalentsByRegistrationID(registration.ID.String(), "GET", token)
+		if err != nil {
+			// Just log the error and continue, don't fail the whole request
+			log.Printf("Error fetching equivalents for registration %s: %v", registration.ID.String(), err)
+		}
+
+		// Get matching data
+		matching, err := s.matchingManagementService.GetMatchingByActivityID(registration.ActivityID, "GET", token)
+		if err != nil {
+			// Just log the error and continue, don't fail the whole request
+			log.Printf("Error fetching matching for activity %s: %v", registration.ActivityID, err)
+		}
+
+		studentRegistrations = append(studentRegistrations, dto.StudentRegistrationWithMatchingResponse{
+			ID:                        registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			UserID:                    registration.UserID,
+			UserNRP:                   registration.UserNRP,
+			UserName:                  registration.UserName,
+			AdvisingConfirmation:      registration.AdvisingConfirmation,
+			AcademicAdvisor:           registration.AcademicAdvisor,
+			AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
+			MentorName:                registration.MentorName,
+			MentorEmail:               registration.MentorEmail,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
+			Documents:                 convertToDocumentResponse(registration.Document),
+			Equivalents:               equivalents,
+			Matching:                  matching,
+		})
+	}
+
+	response.Registrations = studentRegistrations
 	return response, metaData, nil
 }

@@ -8,6 +8,7 @@ const (
 	MESSAGE_REGISTRATION_DELETE_SUCCESS     = "Delete registration success"
 	MESSAGE_REGISTRATION_UPDATE_ERROR       = "Update registration failed"
 	MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS = "Get registration transcript success"
+	MESSAGE_REGISTRATION_MATCHING_SUCCESS   = "Get registration with matching success"
 )
 
 type (
@@ -64,8 +65,8 @@ type (
 	}
 
 	ApprovalRequest struct {
-		Status string `json:"status" binding:"required"`
-		ID     string `json:"id" binding:"required"`
+		Status string   `json:"status" binding:"required"`
+		ID     []string `json:"id" binding:"required"`
 	}
 
 	UpdateRegistrationDataRequest struct {
@@ -126,5 +127,34 @@ type (
 		UserNRP       string                    `json:"user_nrp"`
 		UserName      string                    `json:"user_name"`
 		Registrations []StudentSyllabusResponse `json:"registrations"`
+	}
+
+	StudentRegistrationWithMatchingResponse struct {
+		ID                        string             `json:"id"`
+		ActivityID                string             `json:"activity_id"`
+		UserID                    string             `json:"user_id"`
+		UserNRP                   string             `json:"user_nrp"`
+		UserName                  string             `json:"user_name"`
+		AdvisingConfirmation      bool               `json:"advising_confirmation"`
+		AcademicAdvisor           string             `json:"academic_advisor"`
+		AcademicAdvisorEmail      string             `json:"academic_advisor_email"`
+		MentorName                string             `json:"mentor_name"`
+		MentorEmail               string             `json:"mentor_email"`
+		LOValidation              string             `json:"lo_validation"`
+		AcademicAdvisorValidation string             `json:"academic_advisor_validation"`
+		Semester                  string             `json:"semester"`
+		TotalSKS                  int                `json:"total_sks"`
+		ActivityName              string             `json:"activity_name"`
+		ApprovalStatus            bool               `json:"approval_status"`
+		Documents                 []DocumentResponse `json:"documents"`
+		Equivalents               interface{}        `json:"equivalents"`
+		Matching                  interface{}        `json:"matching"`
+	}
+
+	StudentRegistrationsWithMatchingResponse struct {
+		UserID        string                                    `json:"user_id"`
+		UserNRP       string                                    `json:"user_nrp"`
+		UserName      string                                    `json:"user_name"`
+		Registrations []StudentRegistrationWithMatchingResponse `json:"registrations"`
 	}
 )
