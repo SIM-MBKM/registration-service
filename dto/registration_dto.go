@@ -1,14 +1,15 @@
 package dto
 
 const (
-	MESSAGE_REGISTRATION_GET_ALL_SUCCESS    = "Get all activities success"
-	MESSAGE_REGISTRATION_GET_SUCCESS        = "Get registration success"
-	MESSAGE_REGISTRATION_CREATE_SUCCESS     = "Create registration success"
-	MESSAGE_REGISTRATION_UPDATE_SUCCESS     = "Update registration success"
-	MESSAGE_REGISTRATION_DELETE_SUCCESS     = "Delete registration success"
-	MESSAGE_REGISTRATION_UPDATE_ERROR       = "Update registration failed"
-	MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS = "Get registration transcript success"
-	MESSAGE_REGISTRATION_MATCHING_SUCCESS   = "Get registration with matching success"
+	MESSAGE_REGISTRATION_GET_ALL_SUCCESS     = "Get all activities success"
+	MESSAGE_REGISTRATION_GET_SUCCESS         = "Get registration success"
+	MESSAGE_REGISTRATION_CREATE_SUCCESS      = "Create registration success"
+	MESSAGE_REGISTRATION_UPDATE_SUCCESS      = "Update registration success"
+	MESSAGE_REGISTRATION_DELETE_SUCCESS      = "Delete registration success"
+	MESSAGE_REGISTRATION_UPDATE_ERROR        = "Update registration failed"
+	MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS  = "Get registration transcript success"
+	MESSAGE_REGISTRATION_MATCHING_SUCCESS    = "Get registration with matching success"
+	MESSAGE_REGISTRATION_ELIGIBILITY_SUCCESS = "Check registration eligibility success"
 )
 
 type (
@@ -25,12 +26,13 @@ type (
 		MentorEmail               string             `json:"mentor_email"`
 		LOValidation              string             `json:"lo_validation"`
 		AcademicAdvisorValidation string             `json:"academic_advisor_validation"`
-		Semester                  string             `json:"semester"`
+		Semester                  int                `json:"semester"`
 		TotalSKS                  int                `json:"total_sks"`
 		ActivityName              string             `json:"activity_name"`
 		ApprovalStatus            bool               `json:"approval_status"`
 		Documents                 []DocumentResponse `json:"documents"`
 		Equivalents               interface{}        `json:"equivalents"`
+		Matching                  interface{}        `json:"matching"`
 	}
 
 	FilterRegistrationRequest struct {
@@ -60,7 +62,7 @@ type (
 		AcademicAdvisorEmail string `form:"academic_advisor_email" binding:"required"`
 		MentorName           string `form:"mentor_name" binding:"required"`
 		MentorEmail          string `form:"mentor_email" binding:"required"`
-		Semester             string `form:"semester" binding:"required"`
+		Semester             int    `form:"semester" binding:"required"`
 		TotalSKS             int    `form:"total_sks" binding:"required"`
 	}
 
@@ -75,7 +77,7 @@ type (
 		AcademicAdvisorEmail string `json:"academic_advisor_email"`
 		MentorName           string `json:"mentor_name"`
 		MentorEmail          string `json:"mentor_email"`
-		Semester             string `json:"semester"`
+		Semester             int    `json:"semester"`
 		TotalSKS             int    `json:"total_sks"`
 	}
 
@@ -85,7 +87,7 @@ type (
 		UserNRP        string      `json:"user_nrp"`
 		UserName       string      `json:"user_name"`
 		ActivityName   string      `json:"activity_name"`
-		Semester       string      `json:"semester"`
+		Semester       int         `json:"semester"`
 		TotalSKS       int         `json:"total_sks"`
 		ApprovalStatus bool        `json:"approval_status"`
 		TranscriptData interface{} `json:"transcript_data"`
@@ -95,7 +97,7 @@ type (
 		RegistrationID            string      `json:"registration_id"`
 		ActivityID                string      `json:"activity_id"`
 		ActivityName              string      `json:"activity_name"`
-		Semester                  string      `json:"semester"`
+		Semester                  int         `json:"semester"`
 		TotalSKS                  int         `json:"total_sks"`
 		ApprovalStatus            bool        `json:"approval_status"`
 		LOValidation              string      `json:"lo_validation"`
@@ -107,7 +109,7 @@ type (
 		RegistrationID            string      `json:"registration_id"`
 		ActivityID                string      `json:"activity_id"`
 		ActivityName              string      `json:"activity_name"`
-		Semester                  string      `json:"semester"`
+		Semester                  int         `json:"semester"`
 		TotalSKS                  int         `json:"total_sks"`
 		ApprovalStatus            bool        `json:"approval_status"`
 		LOValidation              string      `json:"lo_validation"`
@@ -142,7 +144,7 @@ type (
 		MentorEmail               string             `json:"mentor_email"`
 		LOValidation              string             `json:"lo_validation"`
 		AcademicAdvisorValidation string             `json:"academic_advisor_validation"`
-		Semester                  string             `json:"semester"`
+		Semester                  int                `json:"semester"`
 		TotalSKS                  int                `json:"total_sks"`
 		ActivityName              string             `json:"activity_name"`
 		ApprovalStatus            bool               `json:"approval_status"`
@@ -156,5 +158,10 @@ type (
 		UserNRP       string                                    `json:"user_nrp"`
 		UserName      string                                    `json:"user_name"`
 		Registrations []StudentRegistrationWithMatchingResponse `json:"registrations"`
+	}
+
+	RegistrationEligibilityResponse struct {
+		Eligible bool   `json:"eligible"`
+		Message  string `json:"message"`
 	}
 )

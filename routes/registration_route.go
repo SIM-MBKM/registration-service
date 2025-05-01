@@ -23,5 +23,6 @@ func RegistrationRoutes(router *gin.Engine, programTypeController controller.Reg
 		registrationServiceRoute.POST("/student/transcripts", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetStudentRegistrationsWithTranscripts)
 		registrationServiceRoute.POST("/student/syllabuses", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetStudentRegistrationsWithSyllabuses)
 		registrationServiceRoute.POST("/student/matching", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetStudentRegistrationsWithMatching)
+		registrationServiceRoute.GET("/check-eligibility", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.CheckRegistrationEligibility)
 	}
 }

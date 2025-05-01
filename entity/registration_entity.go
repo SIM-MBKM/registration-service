@@ -18,7 +18,7 @@ type (
 		MentorEmail               string    `json:"mentor_email" gorm:"not null"`
 		LOValidation              string    `json:"lo_validation" gorm:"not null"`
 		AcademicAdvisorValidation string    `json:"academic_advisor_validation" gorm:"not null"`
-		Semester                  string    `json:"semester" gorm:"not null"`
+		Semester                  int       `json:"semester" gorm:"not null"`
 		TotalSKS                  int       `json:"total_sks" gorm:"not null"`
 		ApprovalStatus            bool      `json:"is_approved" gorm:"not null"`
 		Document                  []Document

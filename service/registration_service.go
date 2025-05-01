@@ -44,6 +44,7 @@ type RegistrationService interface {
 	GetStudentRegistrationsWithTranscripts(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentTranscriptsResponse, dto.PaginationResponse, error)
 	GetStudentRegistrationsWithSyllabuses(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentSyllabusesResponse, dto.PaginationResponse, error)
 	FindRegistrationsWithMatching(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentRegistrationsWithMatchingResponse, dto.PaginationResponse, error)
+	CheckRegistrationEligibility(ctx context.Context, activityID string, token string, tx *gorm.DB) (dto.RegistrationEligibilityResponse, error)
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -293,6 +294,18 @@ func (s *registrationService) FindRegistrationByAdvisor(ctx context.Context, pag
 
 	var response []dto.GetRegistrationResponse
 	for _, registration := range registrations {
+		// get equivalent data
+		equivalents, err := s.matchingManagementService.GetEquivalentsByRegistrationID(registration.ID.String(), "GET", token)
+		if err != nil {
+			return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+		}
+
+		// get matching data
+		matching, err := s.matchingManagementService.GetMatchingByActivityID(registration.ActivityID, "GET", token)
+		if err != nil {
+			return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+		}
+
 		response = append(response, dto.GetRegistrationResponse{
 			ID:                        registration.ID.String(),
 			ActivityID:                registration.ActivityID,
@@ -309,6 +322,8 @@ func (s *registrationService) FindRegistrationByAdvisor(ctx context.Context, pag
 			Semester:                  registration.Semester,
 			TotalSKS:                  registration.TotalSKS,
 			ApprovalStatus:            registration.ApprovalStatus,
+			Equivalents:               equivalents,
+			Matching:                  matching,
 			Documents:                 convertToDocumentResponse(registration.Document),
 		})
 	}
@@ -1121,4 +1136,188 @@ func (s *registrationService) FindRegistrationsWithMatching(ctx context.Context,
 
 	response.Registrations = studentRegistrations
 	return response, metaData, nil
+}
+
+func (s *registrationService) CheckRegistrationEligibility(ctx context.Context, activityID string, token string, tx *gorm.DB) (dto.RegistrationEligibilityResponse, error) {
+	// Get user data from token
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		return dto.RegistrationEligibilityResponse{
+			Eligible: false,
+			Message:  "User data not found",
+		}, errors.New("user data not found")
+	}
+
+	// Ensure we have an NRP
+	userNRP, ok := userData["nrp"].(string)
+	if !ok || userNRP == "" {
+		return dto.RegistrationEligibilityResponse{
+			Eligible: false,
+			Message:  "Invalid user NRP",
+		}, errors.New("invalid user NRP")
+	}
+
+	// Check if the activity exists and is open for registration
+	activitiesData := s.activityManagementService.GetActivitiesData(map[string]interface{}{
+		"activity_id":     activityID,
+		"program_type_id": "",
+		"level_id":        "",
+		"group_id":        "",
+		"name":            "",
+	}, "POST", token)
+
+	if len(activitiesData) == 0 {
+		return dto.RegistrationEligibilityResponse{
+			Eligible: false,
+			Message:  "Activity not found",
+		}, errors.New("activity not found")
+	}
+
+	approvalStatus, ok := activitiesData[0]["approval_status"].(string)
+	if !ok || approvalStatus != "APPROVED" {
+		return dto.RegistrationEligibilityResponse{
+			Eligible: false,
+			Message:  "This activity is not open for registration",
+		}, errors.New("this activity is not open for registration")
+	}
+
+	// Check if already registered for this activity
+	registrationByActivityIDAndNRP, err := s.registrationRepository.FindByActivityIDAndNRP(ctx, activityID, userNRP, tx)
+	if err != nil {
+		if err.Error() != "record not found" {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Error checking existing registration",
+			}, errors.New("error getting registration by activity_id and user_nrp")
+		}
+	}
+
+	if registrationByActivityIDAndNRP.ActivityID == activityID {
+		return dto.RegistrationEligibilityResponse{
+			Eligible: false,
+			Message:  "User already registered for this activity",
+		}, errors.New("user already registered")
+	}
+
+	// Check existing registrations for time conflicts
+	registrationsByNRP, err := s.registrationRepository.FindByNRP(ctx, userNRP, tx)
+	if err != nil {
+		if err.Error() != "record not found" {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Error checking existing registrations",
+			}, errors.New("error checking existing registrations")
+		}
+	}
+
+	if registrationsByNRP.ActivityID != "" && registrationsByNRP.ActivityID != activityID {
+		// Get activity data for the existing registration
+		activitiesDataOld := s.activityManagementService.GetActivitiesData(map[string]interface{}{
+			"activity_id":     registrationsByNRP.ActivityID,
+			"program_type_id": "",
+			"level_id":        "",
+			"group_id":        "",
+			"name":            "",
+		}, "POST", token)
+
+		if len(activitiesDataOld) == 0 {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Error checking existing activity data",
+			}, errors.New("old activity data not found")
+		}
+
+		// Parse the old activity start date and duration
+		var activityOldStartDate time.Time
+		var activityOldMonthsDuration int
+
+		// Handle start_date
+		if startDateVal, ok := activitiesDataOld[0]["start_period"]; ok && startDateVal != nil {
+			if startDateStr, ok := startDateVal.(string); ok {
+				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+				if err != nil {
+					return dto.RegistrationEligibilityResponse{
+						Eligible: false,
+						Message:  "Invalid start period format in existing activity",
+					}, errors.New("invalid start_period format in old activity")
+				}
+				activityOldStartDate = parsedTime
+			} else if startDate, ok := startDateVal.(time.Time); ok {
+				activityOldStartDate = startDate
+			} else {
+				return dto.RegistrationEligibilityResponse{
+					Eligible: false,
+					Message:  "Invalid start period data in existing activity",
+				}, errors.New("invalid start_period type in old activity")
+			}
+		} else {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Start period not found in existing activity",
+			}, errors.New("start_period not found in old activity")
+		}
+
+		// Handle months_duration
+		if durationVal, ok := activitiesDataOld[0]["months_duration"]; ok && durationVal != nil {
+			switch v := durationVal.(type) {
+			case int:
+				activityOldMonthsDuration = v
+			case float64:
+				activityOldMonthsDuration = int(v)
+			default:
+				return dto.RegistrationEligibilityResponse{
+					Eligible: false,
+					Message:  "Invalid duration format in existing activity",
+				}, errors.New("invalid months_duration type in old activity")
+			}
+		} else {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Duration not found in existing activity",
+			}, errors.New("months_duration not found in old activity")
+		}
+
+		activityOldEndDate := activityOldStartDate.AddDate(0, activityOldMonthsDuration, 0)
+
+		// Get start date for the new activity
+		var activityNewStartDate time.Time
+		if startDateVal, ok := activitiesData[0]["start_period"]; ok && startDateVal != nil {
+			if startDateStr, ok := startDateVal.(string); ok {
+				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+				if err != nil {
+					return dto.RegistrationEligibilityResponse{
+						Eligible: false,
+						Message:  "Invalid start period format in new activity",
+					}, errors.New("invalid start_period format in new activity")
+				}
+				activityNewStartDate = parsedTime
+			} else if startDate, ok := startDateVal.(time.Time); ok {
+				activityNewStartDate = startDate
+			} else {
+				return dto.RegistrationEligibilityResponse{
+					Eligible: false,
+					Message:  "Invalid start period data in new activity",
+				}, errors.New("invalid start_period type in new activity")
+			}
+		} else {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "Start period not found in new activity",
+			}, errors.New("start_period not found in new activity")
+		}
+
+		// Check for time conflicts
+		if !activityNewStartDate.After(activityOldEndDate) {
+			return dto.RegistrationEligibilityResponse{
+				Eligible: false,
+				Message:  "User already registered for an overlapping activity period",
+			}, errors.New("user already registered for an overlapping activity period")
+		}
+	}
+
+	// All checks passed, user is eligible to register
+	return dto.RegistrationEligibilityResponse{
+		Eligible: true,
+		Message:  "User is eligible to register for this activity",
+	}, nil
 }

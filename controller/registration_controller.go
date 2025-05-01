@@ -26,6 +26,7 @@ type RegistrationController interface {
 	GetStudentRegistrationsWithTranscripts(ctx *gin.Context)
 	GetStudentRegistrationsWithSyllabuses(ctx *gin.Context)
 	GetStudentRegistrationsWithMatching(ctx *gin.Context)
+	CheckRegistrationEligibility(ctx *gin.Context)
 }
 
 func NewRegistrationController(registrationService service.RegistrationService) RegistrationController {
@@ -530,5 +531,36 @@ func (c *registrationController) GetStudentRegistrationsWithMatching(ctx *gin.Co
 		Status:             dto.STATUS_SUCCESS,
 		Data:               registrations,
 		PaginationResponse: &metaData,
+	})
+}
+
+func (c *registrationController) CheckRegistrationEligibility(ctx *gin.Context) {
+	activityID := ctx.Query("activity_id")
+	if activityID == "" {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: "Activity ID is required",
+		})
+		return
+	}
+
+	// Get header token
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	eligibility, _ := c.registrationService.CheckRegistrationEligibility(ctx, activityID, token, nil)
+
+	// Even if there's an error, we still want to return the eligibility response
+	// since it contains valuable information about why the registration isn't eligible
+	ctx.JSON(http.StatusOK, dto.Response{
+		Message: dto.MESSAGE_REGISTRATION_ELIGIBILITY_SUCCESS,
+		Status:  dto.STATUS_SUCCESS,
+		Data:    eligibility,
 	})
 }
