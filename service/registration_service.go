@@ -213,7 +213,7 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			}
 		}
 		if approval.Status == "REJECTED" {
-			// registration.AcademicAdvisorValidation = "REJECTED"
+			registration.AcademicAdvisorValidation = "REJECTED"
 			// if registration.LOValidation == "REJECTED" {
 			registration.ApprovalStatus = false
 			// }
