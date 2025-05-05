@@ -159,9 +159,9 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 		}
 		if approval.Status == "REJECTED" {
 			registration.LOValidation = "REJECTED"
-			if registration.AcademicAdvisorValidation == "REJECTED" {
-				registration.ApprovalStatus = false
-			}
+			// if registration.AcademicAdvisorValidation == "REJECTED" {
+			// }
+			registration.ApprovalStatus = false
 		}
 
 		err = s.registrationRepository.Update(ctx, id, registration, tx)
