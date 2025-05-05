@@ -35,6 +35,7 @@ type RegistrationService interface {
 	DeleteRegistration(ctx context.Context, id string, token string, tx *gorm.DB) error
 	RegistrationsDataAccess(ctx context.Context, id string, token string, tx *gorm.DB) bool
 	FindRegistrationByAdvisor(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
+	FindRegistrationByLOMBKM(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	FindRegistrationByStudent(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error)
 	ValidateAdvisor(ctx context.Context, token string, tx *gorm.DB) string
 	ValidateStudent(ctx context.Context, token string, tx *gorm.DB) string
@@ -286,6 +287,54 @@ func (s *registrationService) FindRegistrationByAdvisor(ctx context.Context, pag
 
 	filter.AcademicAdvisorEmail = userEmail
 
+	// filter user data
+	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
+	if err != nil {
+		return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+	}
+
+	metaData := helper.MetaDataPagination(total, pagReq)
+
+	var response []dto.GetRegistrationResponse
+	for _, registration := range registrations {
+		// get equivalent data
+		equivalents, err := s.matchingManagementService.GetEquivalentsByRegistrationID(registration.ID.String(), "GET", token)
+		if err != nil {
+			return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+		}
+
+		// get matching data
+		matching, err := s.matchingManagementService.GetMatchingByActivityID(registration.ActivityID, "GET", token)
+		if err != nil {
+			return []dto.GetRegistrationResponse{}, dto.PaginationResponse{}, err
+		}
+
+		response = append(response, dto.GetRegistrationResponse{
+			ID:                        registration.ID.String(),
+			ActivityID:                registration.ActivityID,
+			ActivityName:              registration.ActivityName,
+			UserID:                    registration.UserID,
+			UserNRP:                   registration.UserNRP,
+			AdvisingConfirmation:      registration.AdvisingConfirmation,
+			AcademicAdvisor:           registration.AcademicAdvisor,
+			AcademicAdvisorEmail:      registration.AcademicAdvisorEmail,
+			MentorName:                registration.MentorName,
+			MentorEmail:               registration.MentorEmail,
+			LOValidation:              registration.LOValidation,
+			AcademicAdvisorValidation: registration.AcademicAdvisorValidation,
+			Semester:                  registration.Semester,
+			TotalSKS:                  registration.TotalSKS,
+			ApprovalStatus:            registration.ApprovalStatus,
+			Equivalents:               equivalents,
+			Matching:                  matching,
+			Documents:                 convertToDocumentResponse(registration.Document),
+		})
+	}
+
+	return response, metaData, nil
+}
+
+func (s *registrationService) FindRegistrationByLOMBKM(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {
 	// filter user data
 	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
 	if err != nil {

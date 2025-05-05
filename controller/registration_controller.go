@@ -20,6 +20,7 @@ type RegistrationController interface {
 	UpdateRegistration(ctx *gin.Context)
 	DeleteRegistration(ctx *gin.Context)
 	GetRegistrationsByAdvisor(ctx *gin.Context)
+	GetRegistrationsByLOMBKM(ctx *gin.Context)
 	GetRegistrationsByStudent(ctx *gin.Context)
 	ApproveRegistration(ctx *gin.Context)
 	GetRegistrationTranscript(ctx *gin.Context)
@@ -179,6 +180,46 @@ func (c *registrationController) GetRegistrationsByAdvisor(ctx *gin.Context) {
 
 	pagReq := helper.Pagination(ctx)
 	registrations, metaData, err := c.registrationService.FindRegistrationByAdvisor(ctx, pagReq, request, token, nil)
+
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.Response{
+		Message:            dto.MESSAGE_REGISTRATION_GET_ALL_SUCCESS,
+		Status:             dto.STATUS_SUCCESS,
+		Data:               registrations,
+		PaginationResponse: &metaData,
+	})
+}
+
+func (c *registrationController) GetRegistrationsByLOMBKM(ctx *gin.Context) {
+	var request dto.FilterRegistrationRequest
+	err := ctx.ShouldBindJSON(&request)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// get header token
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	pagReq := helper.Pagination(ctx)
+	registrations, metaData, err := c.registrationService.FindRegistrationByLOMBKM(ctx, pagReq, request, token, nil)
 
 	if err != nil {
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{

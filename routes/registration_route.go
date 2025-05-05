@@ -17,6 +17,7 @@ func RegistrationRoutes(router *gin.Engine, programTypeController controller.Reg
 		registrationServiceRoute.PUT("/:id", programTypeController.UpdateRegistration)
 		registrationServiceRoute.DELETE("/:id", programTypeController.DeleteRegistration)
 		registrationServiceRoute.POST("/advisor", middleware.AuthorizationRole(userService, []string{"DOSEN PEMBIMBING"}), programTypeController.GetRegistrationsByAdvisor)
+		registrationServiceRoute.POST("/lo-mbkm", middleware.AuthorizationRole(userService, []string{"LO-MBKM"}), programTypeController.GetRegistrationsByLOMBKM)
 		registrationServiceRoute.POST("/student", middleware.AuthorizationRole(userService, []string{"MAHASISWA"}), programTypeController.GetRegistrationsByStudent)
 		registrationServiceRoute.POST("/approval", middleware.AuthorizationRole(userService, []string{"ADMIN", "LO-MBKM", "DOSEN PEMBIMBING"}), programTypeController.ApproveRegistration)
 		registrationServiceRoute.GET("/:id/transcript", programTypeController.GetRegistrationTranscript)
