@@ -213,10 +213,10 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			}
 		}
 		if approval.Status == "REJECTED" {
-			registration.AcademicAdvisorValidation = "REJECTED"
-			if registration.LOValidation == "REJECTED" {
-				registration.ApprovalStatus = false
-			}
+			// registration.AcademicAdvisorValidation = "REJECTED"
+			// if registration.LOValidation == "REJECTED" {
+			registration.ApprovalStatus = false
+			// }
 		}
 
 		err = s.registrationRepository.Update(ctx, id, registration, tx)
