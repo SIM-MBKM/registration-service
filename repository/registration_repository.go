@@ -175,6 +175,7 @@ func (r *registrationRepository) Update(ctx context.Context, id string, registra
 	err = r.db.WithContext(ctx).
 		Model(&entity.Registration{}).
 		Where("id = ?", id).
+		Select("*").
 		Updates(&registration).Error
 
 	if err != nil {

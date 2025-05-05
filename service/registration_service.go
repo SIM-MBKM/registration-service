@@ -216,9 +216,11 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			registration.AcademicAdvisorValidation = "REJECTED"
 			// if registration.LOValidation == "REJECTED" {
 			registration.ApprovalStatus = false
+			log.Println("REJECTED", registration)
 			// }
 		}
 
+		log.Println("UPDATE", registration)
 		err = s.registrationRepository.Update(ctx, id, registration, tx)
 		if err != nil {
 			return err
@@ -979,6 +981,8 @@ func (s *registrationService) GetStudentRegistrationsWithTranscripts(ctx context
 				// Just log the error and continue, don't fail the whole request
 				log.Printf("Error fetching transcript for registration %s: %v", registration.ID.String(), err)
 			}
+		} else {
+			continue
 		}
 
 		studentTranscripts = append(studentTranscripts, dto.StudentTranscriptResponse{
@@ -1043,6 +1047,8 @@ func (s *registrationService) GetStudentRegistrationsWithSyllabuses(ctx context.
 				// Just log the error and continue, don't fail the whole request
 				log.Printf("Error fetching transcript for registration %s: %v", registration.ID.String(), err)
 			}
+		} else {
+			continue
 		}
 
 		studentSyllabuses = append(studentSyllabuses, dto.StudentSyllabusResponse{

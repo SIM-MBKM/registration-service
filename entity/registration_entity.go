@@ -20,7 +20,7 @@ type (
 		AcademicAdvisorValidation string    `json:"academic_advisor_validation" gorm:"not null"`
 		Semester                  int       `json:"semester" gorm:"not null"`
 		TotalSKS                  int       `json:"total_sks" gorm:"not null"`
-		ApprovalStatus            bool      `json:"is_approved" gorm:"not null"`
+		ApprovalStatus            bool      `json:"approval_status" gorm:"not null"`
 		Document                  []Document
 		BaseModel
 	}
