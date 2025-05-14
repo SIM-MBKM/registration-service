@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+	"strings"
+
 	baseService "github.com/SIM-MBKM/mod-service/src/service"
 )
 
@@ -20,6 +23,14 @@ func NewMatchingManagementService(baseURI string, asyncURIs []string) *MatchingM
 }
 
 func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, method string, token string) (interface{}, error) {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil, errors.New("invalid token")
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, "matching-management/api/v1/matching/activity/"+activityID, nil, token)
 	if err != nil {
 		return nil, err
@@ -28,6 +39,14 @@ func (s *MatchingManagementService) GetMatchingByActivityID(activityID string, m
 }
 
 func (s *MatchingManagementService) GetEquivalentsByRegistrationID(registrationID string, method string, token string) (interface{}, error) {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil, errors.New("invalid token")
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, "matching-management/api/v1/equivalent/registration/"+registrationID+"?noRecursion=1", nil, token)
 	if err != nil {
 		if err.Error() != "404 Not Found" {

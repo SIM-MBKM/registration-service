@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	baseService "github.com/SIM-MBKM/mod-service/src/service"
 )
@@ -26,6 +27,14 @@ func NewMonitoringManagementService(baseURI string, asyncURIs []string) *Monitor
 }
 
 func (s *MonitoringManagementService) GetSyllabusByRegistrationID(registrationID string, token string) (interface{}, error) {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil, errors.New("invalid token")
+	}
+
+	token = tokenParts[1]
+
 	endpoint := fmt.Sprintf("%s%s", GET_SYLLABUS_BY_REGISTRATION_ID, registrationID)
 	res, err := s.baseService.Request("GET", endpoint, nil, token)
 	if err != nil {
@@ -40,6 +49,15 @@ func (s *MonitoringManagementService) GetSyllabusByRegistrationID(registrationID
 }
 
 func (s *MonitoringManagementService) GetTranscriptByRegistrationID(registrationID string, token string) (interface{}, error) {
+
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil, errors.New("invalid token")
+	}
+
+	token = tokenParts[1]
+
 	endpoint := fmt.Sprintf("%s%s", GET_TRANSCRIPT_BY_REGISTRATION_ID, registrationID)
 	res, err := s.baseService.Request("GET", endpoint, nil, token)
 	if err != nil {
@@ -54,6 +72,14 @@ func (s *MonitoringManagementService) GetTranscriptByRegistrationID(registration
 }
 
 func (s *MonitoringManagementService) CreateReportSchedule(data map[string]interface{}, method string, token string) error {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request("POST", CREATE_REPORT_SCHEDULE, data, token)
 	if err != nil {
 		return nil

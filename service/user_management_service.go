@@ -2,6 +2,7 @@ package service
 
 import (
 	"log"
+	"strings"
 
 	baseService "github.com/SIM-MBKM/mod-service/src/service"
 )
@@ -26,6 +27,14 @@ func NewUserManagementService(baseURI string, asyncURIs []string) *UserManagemen
 
 // create function to get user by id
 func (s *UserManagementService) GetUserData(method string, token string) map[string]interface{} {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, GET_USER_DATA_ENDPOINT, nil, token)
 	if err != nil {
 		return nil
@@ -38,16 +47,24 @@ func (s *UserManagementService) GetUserData(method string, token string) map[str
 
 	var usersData map[string]interface{}
 	usersData = map[string]interface{}{
-		"id":   users["id"],
-		"nrp":  users["nrp"],
-		"name": users["name"],
-		"role": users["role"],
+		"id":    users["id"],
+		"nrp":   users["nrp"],
+		"name":  users["name"],
+		"role":  users["role"],
 		"email": users["email"],
 	}
 	return usersData
 }
 
 func (s *UserManagementService) GetUserByFilter(data map[string]interface{}, method string, token string) []map[string]interface{} {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, GET_USER_BY_FILTER_ENDPOINT, data, token)
 	if err != nil {
 		return nil
@@ -78,6 +95,14 @@ func (s *UserManagementService) GetUserByFilter(data map[string]interface{}, met
 }
 
 func (s *UserManagementService) GetUserRole(method string, token string) map[string]interface{} {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, GET_USER_ROLE_ENDPOINT, nil, token)
 	if err != nil {
 		return nil
@@ -96,6 +121,14 @@ func (s *UserManagementService) GetUserRole(method string, token string) map[str
 }
 
 func (s *UserManagementService) GetDosenDataByEmail(data map[string]interface{}, method string, token string) map[string]interface{} {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, GET_DOSEN_DATA_BY_EMAIL_ENDPOINT, data, token)
 	if err != nil {
 		return nil

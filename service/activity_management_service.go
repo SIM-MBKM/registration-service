@@ -2,6 +2,7 @@ package service
 
 import (
 	"log"
+	"strings"
 
 	baseService "github.com/SIM-MBKM/mod-service/src/service"
 )
@@ -21,6 +22,14 @@ func NewActivityManagementService(baseURI string, asyncURIs []string) *ActivityM
 }
 
 func (s *ActivityManagementService) GetActivitiesData(data map[string]interface{}, method string, token string) []map[string]interface{} {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil
+	}
+
+	token = tokenParts[1]
+
 	res, err := s.baseService.Request(method, GET_ACTIVITIY_FILTER_ENDPOINT, data, token)
 
 	if err != nil {
