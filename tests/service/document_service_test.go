@@ -6,7 +6,7 @@ import (
 	"mime/multipart"
 	"registration-service/dto"
 	"registration-service/entity"
-	"registration-service/mocks"
+	repository_mock "registration-service/mocks/repository"
 	"registration-service/service"
 	"testing"
 	"time"
@@ -89,8 +89,8 @@ func createTestDocRegistration() entity.Registration {
 
 func TestFindAllDocuments(t *testing.T) {
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	documents := []entity.Document{createTestDocument(), createTestDocument()}
@@ -118,8 +118,8 @@ func TestFindAllDocuments(t *testing.T) {
 
 func TestFindAllDocuments_Error(t *testing.T) {
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	expectedError := errors.New("database error")
@@ -147,8 +147,8 @@ func TestFindAllDocuments_Error(t *testing.T) {
 
 func TestFindDocumentById(t *testing.T) {
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	document := createTestDocument()
@@ -173,8 +173,8 @@ func TestFindDocumentById(t *testing.T) {
 
 func TestFindDocumentById_Error(t *testing.T) {
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	id := uuid.New().String()
@@ -199,8 +199,8 @@ func TestDeleteDocument(t *testing.T) {
 	t.Skip("Skipping test as we can't properly mock FileService")
 
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	document := createTestDocument()
@@ -223,8 +223,8 @@ func TestDeleteDocument(t *testing.T) {
 
 func TestDeleteDocument_FindError(t *testing.T) {
 	// Arrange
-	mockDocRepo := new(mocks.MockDocumentRepository)
-	mockRegRepo := new(mocks.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
 
 	ctx := context.Background()
 	id := uuid.New().String()
@@ -242,8 +242,3 @@ func TestDeleteDocument_FindError(t *testing.T) {
 	assert.Equal(t, expectedError, err)
 	mockDocRepo.AssertExpectations(t)
 }
-
-// Note: We're skipping tests for CreateDocument and UpdateDocument as they require
-// multipart.FileHeader and FileService which are harder to mock without dependency injection.
-// In a real-world scenario, we would refactor the service to make it more testable by
-// allowing injection of the file service or using interfaces.

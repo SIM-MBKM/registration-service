@@ -1,4 +1,4 @@
-package mocks
+package repository_mock
 
 import (
 	"database/sql"

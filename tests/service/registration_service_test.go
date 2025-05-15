@@ -4,7 +4,7 @@ import (
 	"context"
 	"registration-service/dto"
 	"registration-service/entity"
-	"registration-service/mocks"
+	repository_mock "registration-service/mocks/repository"
 	"registration-service/service"
 	"testing"
 	"time"
@@ -109,8 +109,8 @@ func createTestRegRegistration() entity.Registration {
 // Test FindAllRegistrations
 func TestFindAllRegistrations(t *testing.T) {
 	// Arrange
-	mockRegRepo := new(mocks.MockRegistrationRepository)
-	mockDocRepo := new(mocks.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
 
 	ctx := context.Background()
 	registrations := []entity.Registration{createTestRegRegistration(), createTestRegRegistration()}
@@ -145,8 +145,8 @@ func TestFindAllRegistrations(t *testing.T) {
 // Test FindRegistrationByID
 func TestFindRegistrationByID(t *testing.T) {
 	// Arrange
-	mockRegRepo := new(mocks.MockRegistrationRepository)
-	mockDocRepo := new(mocks.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
 	mockUserService := new(mockServiceComponent)
 	mockMatchingService := new(mockServiceComponent)
 
@@ -198,8 +198,8 @@ func TestFindRegistrationByID(t *testing.T) {
 // Test RegistrationsDataAccess - Access Allowed
 func TestRegistrationsDataAccess_AccessAllowed(t *testing.T) {
 	// Arrange
-	mockRegRepo := new(mocks.MockRegistrationRepository)
-	mockDocRepo := new(mocks.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
 	mockUserService := new(mockServiceComponent)
 
 	ctx := context.Background()
@@ -232,8 +232,8 @@ func TestDeleteRegistration(t *testing.T) {
 	t.Skip("Skipping test as we can't properly mock FileService")
 
 	// Arrange
-	mockRegRepo := new(mocks.MockRegistrationRepository)
-	mockDocRepo := new(mocks.MockDocumentRepository)
+	mockRegRepo := new(repository_mock.MockRegistrationRepository)
+	mockDocRepo := new(repository_mock.MockDocumentRepository)
 	mockUserService := new(mockServiceComponent)
 
 	ctx := context.Background()
@@ -264,7 +264,7 @@ func TestDeleteRegistration(t *testing.T) {
 
 // Helper function to create a service instance
 // Note: This doesn't actually inject mock dependencies properly because the service doesn't support DI
-func createTestRegistrationService(mockRegRepo *mocks.MockRegistrationRepository, mockDocRepo *mocks.MockDocumentRepository) service.RegistrationService {
+func createTestRegistrationService(mockRegRepo *repository_mock.MockRegistrationRepository, mockDocRepo *repository_mock.MockDocumentRepository) service.RegistrationService {
 	return service.NewRegistrationService(
 		mockRegRepo,
 		mockDocRepo,
@@ -278,16 +278,3 @@ func createTestRegistrationService(mockRegRepo *mocks.MockRegistrationRepository
 		nil,
 	)
 }
-
-// Note: Many methods in RegistrationService are challenging to test with the current
-// implementation because:
-// 1. External services (UserManagementService, ActivityManagementService, etc.) are created
-//    directly in the constructor rather than being injected
-// 2. FileService and other dependencies are not easily mockable
-//
-// To improve testability, the service would need to be refactored to:
-// 1. Accept interfaces instead of concrete implementations
-// 2. Use dependency injection for all external services
-// 3. Make the FileService and other components injectable or accessible for testing
-//
-// The tests above illustrate the approach but many will fail with the current implementation.

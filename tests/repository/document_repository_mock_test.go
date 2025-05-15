@@ -5,7 +5,7 @@ import (
 	"errors"
 	"registration-service/dto"
 	"registration-service/entity"
-	"registration-service/mocks"
+	repository_mock "registration-service/mocks/repository"
 	"testing"
 	"time"
 
@@ -33,7 +33,7 @@ func createMockDocument() entity.Document {
 
 func TestDocumentRepository_Create(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -53,7 +53,7 @@ func TestDocumentRepository_Create(t *testing.T) {
 
 func TestDocumentRepository_Create_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -74,7 +74,7 @@ func TestDocumentRepository_Create_Error(t *testing.T) {
 
 func TestDocumentRepository_FindByID(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -95,7 +95,7 @@ func TestDocumentRepository_FindByID(t *testing.T) {
 
 func TestDocumentRepository_FindByID_NotFound(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -117,7 +117,7 @@ func TestDocumentRepository_FindByID_NotFound(t *testing.T) {
 
 func TestDocumentRepository_Index(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -144,7 +144,7 @@ func TestDocumentRepository_Index(t *testing.T) {
 
 func TestDocumentRepository_Update(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -164,7 +164,7 @@ func TestDocumentRepository_Update(t *testing.T) {
 
 func TestDocumentRepository_Update_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -186,7 +186,7 @@ func TestDocumentRepository_Update_Error(t *testing.T) {
 
 func TestDocumentRepository_DeleteByID(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -205,7 +205,7 @@ func TestDocumentRepository_DeleteByID(t *testing.T) {
 
 func TestDocumentRepository_DeleteByID_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -226,7 +226,7 @@ func TestDocumentRepository_DeleteByID_Error(t *testing.T) {
 
 func TestDocumentRepository_FindTotal(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -246,7 +246,7 @@ func TestDocumentRepository_FindTotal(t *testing.T) {
 
 func TestDocumentRepository_FindTotal_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -267,7 +267,7 @@ func TestDocumentRepository_FindTotal_Error(t *testing.T) {
 
 func TestDocumentRepository_GetAll(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	documents := []entity.Document{createMockDocument(), createMockDocument()}
@@ -287,7 +287,7 @@ func TestDocumentRepository_GetAll(t *testing.T) {
 
 func TestDocumentRepository_GetAll_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockDocumentRepository)
+	mockRepo := new(repository_mock.MockDocumentRepository)
 
 	// Setup test data
 	expectedError := errors.New("database error")

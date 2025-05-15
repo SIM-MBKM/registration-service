@@ -5,7 +5,7 @@ import (
 	"errors"
 	"registration-service/dto"
 	"registration-service/entity"
-	"registration-service/mocks"
+	repository_mock "registration-service/mocks/repository"
 	"testing"
 	"time"
 
@@ -49,7 +49,7 @@ func createMockRegistration() entity.Registration {
 // Test error scenarios using mocks
 func TestRegistrationRepository_CreateWithTransactionError(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -71,7 +71,7 @@ func TestRegistrationRepository_CreateWithTransactionError(t *testing.T) {
 
 func TestRegistrationRepository_FindByID_NotFound(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestRegistrationRepository_FindByID_NotFound(t *testing.T) {
 
 func TestRegistrationRepository_Index_WithFilters(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -126,7 +126,7 @@ func TestRegistrationRepository_Index_WithFilters(t *testing.T) {
 
 func TestRegistrationRepository_Update_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -148,7 +148,7 @@ func TestRegistrationRepository_Update_Error(t *testing.T) {
 
 func TestRegistrationRepository_Destroy_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -169,7 +169,7 @@ func TestRegistrationRepository_Destroy_Error(t *testing.T) {
 
 func TestRegistrationRepository_FindByNRP_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -190,7 +190,7 @@ func TestRegistrationRepository_FindByNRP_Error(t *testing.T) {
 
 func TestRegistrationRepository_FindByActivityIDAndNRP_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -212,7 +212,7 @@ func TestRegistrationRepository_FindByActivityIDAndNRP_Error(t *testing.T) {
 
 func TestRegistrationRepository_FindTotal_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
@@ -233,7 +233,7 @@ func TestRegistrationRepository_FindTotal_Error(t *testing.T) {
 
 func TestRegistrationRepository_FindRegistrationByAdvisiorEmail_Error(t *testing.T) {
 	// Create mock repository
-	mockRepo := new(mocks.MockRegistrationRepository)
+	mockRepo := new(repository_mock.MockRegistrationRepository)
 
 	// Setup test data
 	ctx := context.Background()
