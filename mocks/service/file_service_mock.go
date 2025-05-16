@@ -34,11 +34,11 @@ func (m *MockStorageInterface) GcsDelete(fileID, projectID, bucketName string) (
 
 type MockFileService struct {
 	mock.Mock
-	storage *MockStorageInterface
+	Storage *MockStorageInterface
 }
 
 func NewMockFileService() *MockFileService {
 	return &MockFileService{
-		storage: &MockStorageInterface{},
+		Storage: &MockStorageInterface{},
 	}
 }
