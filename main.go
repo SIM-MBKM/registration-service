@@ -6,16 +6,20 @@ import (
 	"registration-service/middleware"
 	"registration-service/routes"
 	"registration-service/service"
+	"strconv"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
 	"github.com/SIM-MBKM/mod-service/src/helpers"
 	baseServiceHelpers "github.com/SIM-MBKM/mod-service/src/helpers"
+	securityMiddleware "github.com/SIM-MBKM/mod-service/src/middleware"
 )
 
 func main() {
 	baseServiceHelpers.LoadEnv()
 	secretKeyService := helpers.GetEnv("APP_KEY", "secret")
 	port := helpers.GetEnv("GOLANG_PORT", "8088")
+
+	expireSeconds, _ := strconv.ParseInt(helpers.GetEnv("APP_KEY_EXPIRE_SECONDS", "9999"), 10, 64)
 
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
@@ -49,6 +53,7 @@ func main() {
 
 	server := localConfig.NewServer()
 	server.Use(middleware.CORS())
+	server.Use(securityMiddleware.AccessKeyMiddleware(secretKeyService, expireSeconds))
 
 	userService := service.NewUserManagementService(userManagementServiceURI, []string{"/async"})
 
