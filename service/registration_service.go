@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"mime/multipart"
-	"reflect"
 	"registration-service/dto"
 	"registration-service/entity"
 	"registration-service/helper"
@@ -855,47 +854,37 @@ func (s *registrationService) UpdateRegistration(ctx context.Context, id string,
 		return errors.New("data not found")
 	}
 
-	// Find existing program type
-	res, err := s.registrationRepository.FindByID(ctx, id, tx)
+	// Find existing registration
+	existingRegistration, err := s.registrationRepository.FindByID(ctx, id, tx)
 	if err != nil {
 		return err
 	}
 
-	// Create programTypeEntity with original ID
-	registrationEntity := entity.Registration{
-		ID: res.ID,
+	// Update only the fields that are provided in the request
+	if registration.AdvisingConfirmation {
+		existingRegistration.AdvisingConfirmation = registration.AdvisingConfirmation
 	}
-
-	// Get reflection values
-	resValue := reflect.ValueOf(res)
-	reqValue := reflect.ValueOf(registration)
-	entityValue := reflect.ValueOf(&registrationEntity).Elem()
-
-	// Iterate through fields of the request type
-	for i := 0; i < reqValue.Type().NumField(); i++ {
-		reqField := reqValue.Type().Field(i)
-		reqFieldValue := reqValue.Field(i)
-
-		// Find corresponding field in the entity
-		entityField := entityValue.FieldByName(reqField.Name)
-
-		// Find corresponding field in the original result
-		resField := resValue.FieldByName(reqField.Name)
-
-		// Check if the field exists and can be set
-		if entityField.IsValid() && entityField.CanSet() {
-			// If the request field is not zero, use its value
-			if !reflect.DeepEqual(reqFieldValue.Interface(), reflect.Zero(reqFieldValue.Type()).Interface()) {
-				entityField.Set(reqFieldValue)
-			} else {
-				// Otherwise, use the original value
-				entityField.Set(resField)
-			}
-		}
+	if registration.AcademicAdvisor != "" {
+		existingRegistration.AcademicAdvisor = registration.AcademicAdvisor
+	}
+	if registration.AcademicAdvisorEmail != "" {
+		existingRegistration.AcademicAdvisorEmail = registration.AcademicAdvisorEmail
+	}
+	if registration.MentorName != "" {
+		existingRegistration.MentorName = registration.MentorName
+	}
+	if registration.MentorEmail != "" {
+		existingRegistration.MentorEmail = registration.MentorEmail
+	}
+	if registration.Semester != 0 {
+		existingRegistration.Semester = registration.Semester
+	}
+	if registration.TotalSKS != 0 {
+		existingRegistration.TotalSKS = registration.TotalSKS
 	}
 
 	// Perform the update
-	err = s.registrationRepository.Update(ctx, id, registrationEntity, tx)
+	err = s.registrationRepository.Update(ctx, id, existingRegistration, tx)
 	if err != nil {
 		return err
 	}

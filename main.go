@@ -16,10 +16,10 @@ import (
 
 func main() {
 	baseServiceHelpers.LoadEnv()
-	secretKeyService := helpers.GetEnv("APP_KEY", "secret")
-	port := helpers.GetEnv("GOLANG_PORT", "8088")
+	secretKeyService := baseServiceHelpers.GetEnv("APP_KEY", "secret")
+	port := baseServiceHelpers.GetEnv("GOLANG_PORT", "8088")
 
-	expireSeconds, _ := strconv.ParseInt(helpers.GetEnv("APP_KEY_EXPIRE_SECONDS", "9999"), 10, 64)
+	expireSeconds, _ := strconv.ParseInt(baseServiceHelpers.GetEnv("APP_KEY_EXPIRE_SECONDS", "9999"), 10, 64)
 
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
