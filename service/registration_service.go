@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"mime/multipart"
 	"registration-service/dto"
@@ -24,6 +25,7 @@ type registrationService struct {
 	fileService                 *FileService
 	matchingManagementService   *MatchingManagementService
 	monitoringManagementService *MonitoringManagementService
+	brokerService               *BrokerService
 }
 
 type RegistrationService interface {
@@ -47,7 +49,7 @@ type RegistrationService interface {
 	CheckRegistrationEligibility(ctx context.Context, activityID string, token string, tx *gorm.DB) (dto.RegistrationEligibilityResponse, error)
 }
 
-func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
+func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, brokerbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
 	return &registrationService{
 		registrationRepository:      registrationRepository,
 		documentRepository:          documentRepository,
@@ -56,6 +58,7 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		matchingManagementService:   NewMatchingManagementService(matchingManagementbaseURI, asyncURIs),
 		monitoringManagementService: NewMonitoringManagementService(monitoringManagementbaseURI, asyncURIs),
 		fileService:                 NewFileService(config, tokenManager),
+		brokerService:               NewBrokerService(brokerbaseURI, asyncURIs),
 	}
 }
 
@@ -169,6 +172,27 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 			return err
 		}
 
+		userData := s.userManagementService.GetUserData("GET", token)
+
+		userEmail := userData["email"]
+		userName := userData["name"]
+		message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, "LO-MBKM")
+
+		// get mahasiswa data
+		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
+			"user_nrp": registration.UserNRP,
+		}, "POST", token)
+
+		mahasiswaEmail := mahasiswaData[0]["email"]
+
+		err = s.brokerService.SendNotification(map[string]interface{}{
+			"sender_name":    userName,
+			"sender_email":   userEmail,
+			"receiver_email": mahasiswaEmail,
+			"type":           "APPROVAL REGISTRATION",
+			"message":        message,
+		}, "POST", token)
+
 	}
 
 	return nil
@@ -222,6 +246,31 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 
 		log.Println("UPDATE", registration)
 		err = s.registrationRepository.Update(ctx, id, registration, tx)
+		if err != nil {
+			return err
+		}
+
+		userData := s.userManagementService.GetUserData("GET", token)
+
+		userEmail := userData["email"]
+		userName := userData["name"]
+		message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, userName)
+
+		// get mahasiswa data
+		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
+			"user_nrp": registration.UserNRP,
+		}, "POST", token)
+
+		mahasiswaEmail := mahasiswaData[0]["email"]
+
+		err = s.brokerService.SendNotification(map[string]interface{}{
+			"sender_name":    userName,
+			"sender_email":   userEmail,
+			"receiver_email": mahasiswaEmail,
+			"type":           "APPROVAL REGISTRATION",
+			"message":        message,
+		}, "POST", token)
+
 		if err != nil {
 			return err
 		}
@@ -841,6 +890,21 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	_, err = s.documentRepository.Create(ctx, geoletterEntity, tx)
+	if err != nil {
+		return err
+	}
+
+	userEmail := usersData[0]["email"]
+	message := fmt.Sprintf("%s has registered for %s", userName, activityName)
+	// send notification to academic advisor
+	err = s.brokerService.SendNotification(map[string]interface{}{
+		"sender_name":    userName,
+		"sender_email":   userEmail,
+		"receiver_email": registration.AcademicAdvisorEmail,
+		"type":           "REGISTER",
+		"message":        message,
+	}, "POST", token)
+
 	if err != nil {
 		return err
 	}

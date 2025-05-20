@@ -30,11 +30,12 @@ func ProvideRegistrationService(
 	activityManagementbaseURI config.ActivityManagementbaseURI,
 	matchingManagementbaseURI config.MatchingManagementbaseURI,
 	monitoringManagementbaseURI config.MonitoringManagementbaseURI,
+	brokerbaseURI config.BrokerbaseURI,
 	asyncURIs config.AsyncURIs,
 	config *storageService.Config,
 	tokenManager *storageService.CacheTokenManager,
 ) service.RegistrationService {
-	return service.NewRegistrationService(registrationRepository, documentRepository, string(secretKey), string(userManagementbaseURI), string(activityManagementbaseURI), string(matchingManagementbaseURI), string(monitoringManagementbaseURI), []string(asyncURIs), config, tokenManager)
+	return service.NewRegistrationService(registrationRepository, documentRepository, string(secretKey), string(userManagementbaseURI), string(activityManagementbaseURI), string(matchingManagementbaseURI), string(monitoringManagementbaseURI), string(brokerbaseURI), []string(asyncURIs), config, tokenManager)
 }
 
 func ProvideRegistrationController(registrationService service.RegistrationService) controller.RegistrationController {
@@ -55,6 +56,7 @@ func InitializeRegistration(
 	activityManagementbaseURI config.ActivityManagementbaseURI,
 	matchingManagementbaseURI config.MatchingManagementbaseURI,
 	monitoringManagementbaseURI config.MonitoringManagementbaseURI,
+	brokerbaseURI config.BrokerbaseURI,
 	asyncURIs config.AsyncURIs,
 	config *storageService.Config,
 	tokenManager *storageService.CacheTokenManager,

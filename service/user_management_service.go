@@ -86,9 +86,10 @@ func (s *UserManagementService) GetUserByFilter(data map[string]interface{}, met
 		}
 
 		usersData = append(usersData, map[string]interface{}{
-			"id":   user["id"],
-			"nrp":  user["nrp"],
-			"name": user["name"],
+			"id":    user["id"],
+			"nrp":   user["nrp"],
+			"name":  user["name"],
+			"email": user["email"],
 		})
 	}
 	return usersData

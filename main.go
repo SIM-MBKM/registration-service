@@ -25,6 +25,7 @@ func main() {
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
 	matchingManagementServiceURI := helpers.GetEnv("MATCHING_MANAGEMENT_BASE_URI", "http://localhost:8087")
 	monitoringManagementServiceURI := helpers.GetEnv("MONITORING_MANAGEMENT_BASE_URI", "http://localhost:8089")
+	brokerbaseURI := helpers.GetEnv("BROKER_BASE_URI", "http://localhost:8099")
 
 	db := localConfig.SetupDatabaseConnection()
 
@@ -37,7 +38,7 @@ func main() {
 
 	tokenManager := storageService.NewCacheTokenManager(config, cache)
 
-	registrationController, err := InitializeRegistration(db, localConfig.SecretKey(secretKeyService), localConfig.UserManagementbaseURI(userManagementServiceURI), localConfig.ActivityManagementbaseURI(activityManagementServiceURI), localConfig.MatchingManagementbaseURI(matchingManagementServiceURI), localConfig.MonitoringManagementbaseURI(monitoringManagementServiceURI), []string{"/async"}, config, tokenManager)
+	registrationController, err := InitializeRegistration(db, localConfig.SecretKey(secretKeyService), localConfig.UserManagementbaseURI(userManagementServiceURI), localConfig.ActivityManagementbaseURI(activityManagementServiceURI), localConfig.MatchingManagementbaseURI(matchingManagementServiceURI), localConfig.MonitoringManagementbaseURI(monitoringManagementServiceURI), localConfig.BrokerbaseURI(brokerbaseURI), []string{"/async"}, config, tokenManager)
 
 	if err != nil {
 		helper.PanicIfError(err)

@@ -18,10 +18,10 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeRegistration(db *gorm.DB, secretKey config.SecretKey, userManagementbaseURI config.UserManagementbaseURI, activityManagementbaseURI config.ActivityManagementbaseURI, matchingManagementbaseURI config.MatchingManagementbaseURI, monitoringManagementbaseURI config.MonitoringManagementbaseURI, asyncURIs config.AsyncURIs, config2 *storage.Config, tokenManager *storage.CacheTokenManager) (controller.RegistrationController, error) {
+func InitializeRegistration(db *gorm.DB, secretKey config.SecretKey, userManagementbaseURI config.UserManagementbaseURI, activityManagementbaseURI config.ActivityManagementbaseURI, matchingManagementbaseURI config.MatchingManagementbaseURI, monitoringManagementbaseURI config.MonitoringManagementbaseURI, brokerbaseURI config.BrokerbaseURI, asyncURIs config.AsyncURIs, config2 *storage.Config, tokenManager *storage.CacheTokenManager) (controller.RegistrationController, error) {
 	registrationRepository := ProvideRegistrationRepository(db)
 	documentRepository := ProvideDocumentRepository(db)
-	registrationService := ProvideRegistrationService(registrationRepository, documentRepository, secretKey, userManagementbaseURI, activityManagementbaseURI, matchingManagementbaseURI, monitoringManagementbaseURI, asyncURIs, config2, tokenManager)
+	registrationService := ProvideRegistrationService(registrationRepository, documentRepository, secretKey, userManagementbaseURI, activityManagementbaseURI, matchingManagementbaseURI, monitoringManagementbaseURI, brokerbaseURI, asyncURIs, config2, tokenManager)
 	registrationController := ProvideRegistrationController(registrationService)
 	return registrationController, nil
 }
@@ -52,10 +52,11 @@ func ProvideRegistrationService(
 	activityManagementbaseURI config.ActivityManagementbaseURI,
 	matchingManagementbaseURI config.MatchingManagementbaseURI,
 	monitoringManagementbaseURI config.MonitoringManagementbaseURI,
+	brokerbaseURI config.BrokerbaseURI,
 	asyncURIs config.AsyncURIs, config2 *storage.Config,
 	tokenManager *storage.CacheTokenManager,
 ) service.RegistrationService {
-	return service.NewRegistrationService(registrationRepository, documentRepository, string(secretKey), string(userManagementbaseURI), string(activityManagementbaseURI), string(matchingManagementbaseURI), string(monitoringManagementbaseURI), []string(asyncURIs), config2, tokenManager)
+	return service.NewRegistrationService(registrationRepository, documentRepository, string(secretKey), string(userManagementbaseURI), string(activityManagementbaseURI), string(matchingManagementbaseURI), string(monitoringManagementbaseURI), string(brokerbaseURI), []string(asyncURIs), config2, tokenManager)
 }
 
 func ProvideRegistrationController(registrationService service.RegistrationService) controller.RegistrationController {

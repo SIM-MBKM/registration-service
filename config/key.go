@@ -12,4 +12,6 @@ type MatchingManagementbaseURI string
 
 type MonitoringManagementbaseURI string
 
+type BrokerbaseURI string
+
 type AsyncURIs []string
