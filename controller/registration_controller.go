@@ -28,12 +28,39 @@ type RegistrationController interface {
 	GetStudentRegistrationsWithSyllabuses(ctx *gin.Context)
 	GetStudentRegistrationsWithMatching(ctx *gin.Context)
 	CheckRegistrationEligibility(ctx *gin.Context)
+	GetTotalRegistrationByAdvisorEmail(ctx *gin.Context)
 }
 
 func NewRegistrationController(registrationService service.RegistrationService) RegistrationController {
 	return &registrationController{
 		registrationService: registrationService,
 	}
+}
+
+func (c *registrationController) GetTotalRegistrationByAdvisorEmail(ctx *gin.Context) {
+	token := ctx.GetHeader("Authorization")
+	if token == "" {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: dto.MESSAGE_UNAUTHORIZED,
+		})
+		return
+	}
+
+	registrationCount, err := c.registrationService.FindTotalRegistrationByAdvisorEmail(ctx, token, nil)
+	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, dto.Response{
+			Status:  dto.STATUS_ERROR,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.Response{
+		Status:  dto.STATUS_SUCCESS,
+		Message: dto.MESSAGE_REGISTRATION_GET_TOTAL_SUCCESS,
+		Data:    registrationCount,
+	})
 }
 
 func (c *registrationController) ApproveRegistration(ctx *gin.Context) {

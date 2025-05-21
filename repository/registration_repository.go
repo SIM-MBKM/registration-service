@@ -5,6 +5,7 @@ import (
 	"errors"
 	"registration-service/dto"
 	"registration-service/entity"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -25,10 +26,102 @@ type RegistrationRepository interface {
 	FindRegistrationByAdvisiorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.Registration, error)
 	FindByNRP(ctx context.Context, nrp string, tx *gorm.DB) (entity.Registration, error)
 	FindByActivityIDAndNRP(ctx context.Context, activityID string, nrp string, tx *gorm.DB) (entity.Registration, error)
+	FindTotalRegistrationByAdvisorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.RegistrationCount, error)
 }
 
 func NewRegistrationRepository(db *gorm.DB) RegistrationRepository {
 	return &registrationRepository{db: db, baseRepository: NewBaseRepository(db)}
+}
+
+func (r *registrationRepository) FindTotalRegistrationByAdvisorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.RegistrationCount, error) {
+	if tx == nil {
+		tx = r.db
+	}
+
+	var registrationCount entity.RegistrationCount
+	var total int64
+	var totalApproved int64
+	var totalPercentageFromLastMonth int64
+	var thisMonth int64
+	var lastMonth int64
+	var totalApprovedPercentageFromLastMonth int64
+	var thisMonthApproved int64
+	var lastMonthApproved int64
+
+	err := tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Count(&total).Error
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	err = tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("approval_status = ?", true).
+		Count(&totalApproved).Error
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	// get total percentage of this month
+	err = tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("created_at BETWEEN ? AND ?", time.Now().AddDate(0, -1, 0), time.Now()).
+		Count(&thisMonth).Error
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	// get total percentage of last month
+	err = tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("created_at BETWEEN ? AND ?", time.Now().AddDate(0, -2, 0), time.Now().AddDate(0, -1, 0)).
+		Count(&lastMonth).Error
+
+	totalPercentageFromLastMonth = (thisMonth / lastMonth) * 100
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	// get total percentage of approved this month
+	err = tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("created_at BETWEEN ? AND ?", time.Now().AddDate(0, -1, 0), time.Now()).
+		Where("approval_status = ?", true).
+		Count(&thisMonthApproved).Error
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	// get total percentage of approved last month
+	err = tx.WithContext(ctx).
+		Model(&entity.Registration{}).
+		Where("academic_advisor_email = ?", email).
+		Where("created_at BETWEEN ? AND ?", time.Now().AddDate(0, -2, 0), time.Now().AddDate(0, -1, 0)).
+		Where("approval_status = ?", true).
+		Count(&lastMonthApproved).Error
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	totalApprovedPercentageFromLastMonth = (thisMonthApproved / lastMonthApproved) * 100
+	registrationCount.Total = total
+	registrationCount.TotalApproved = totalApproved
+	registrationCount.TotalPercentageFromLastMonth = totalPercentageFromLastMonth
+	registrationCount.TotalApprovedPercentageFromLastMonth = totalApprovedPercentageFromLastMonth
+
+	return registrationCount, nil
 }
 
 func (r *registrationRepository) FindByActivityIDAndNRP(ctx context.Context, activityID string, nrp string, tx *gorm.DB) (entity.Registration, error) {

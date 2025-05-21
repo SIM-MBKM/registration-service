@@ -24,4 +24,11 @@ type (
 		Document                  []Document
 		BaseModel
 	}
+
+	RegistrationCount struct {
+		Total                                int64 `json:"total"`
+		TotalApproved                        int64 `json:"total_approved"`
+		TotalPercentageFromLastMonth         int64 `json:"total_percentage_from_last_month"`
+		TotalApprovedPercentageFromLastMonth int64 `json:"total_approved_percentage_from_last_month"`
+	}
 )

@@ -10,6 +10,7 @@ const (
 	MESSAGE_REGISTRATION_TRANSCRIPT_SUCCESS  = "Get registration transcript success"
 	MESSAGE_REGISTRATION_MATCHING_SUCCESS    = "Get registration with matching success"
 	MESSAGE_REGISTRATION_ELIGIBILITY_SUCCESS = "Check registration eligibility success"
+	MESSAGE_REGISTRATION_GET_TOTAL_SUCCESS   = "Get total registration success"
 )
 
 type (

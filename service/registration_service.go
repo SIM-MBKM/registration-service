@@ -47,6 +47,7 @@ type RegistrationService interface {
 	GetStudentRegistrationsWithSyllabuses(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentSyllabusesResponse, dto.PaginationResponse, error)
 	FindRegistrationsWithMatching(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentRegistrationsWithMatchingResponse, dto.PaginationResponse, error)
 	CheckRegistrationEligibility(ctx context.Context, activityID string, token string, tx *gorm.DB) (dto.RegistrationEligibilityResponse, error)
+	FindTotalRegistrationByAdvisorEmail(ctx context.Context, token string, tx *gorm.DB) (entity.RegistrationCount, error)
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, brokerbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -60,6 +61,25 @@ func NewRegistrationService(registrationRepository repository.RegistrationReposi
 		fileService:                 NewFileService(config, tokenManager),
 		brokerService:               NewBrokerService(brokerbaseURI, asyncURIs),
 	}
+}
+
+func (s *registrationService) FindTotalRegistrationByAdvisorEmail(ctx context.Context, token string, tx *gorm.DB) (entity.RegistrationCount, error) {
+
+	userData := s.userManagementService.GetUserData("GET", token)
+
+	email := userData["email"]
+	emailString, ok := email.(string)
+	if !ok {
+		return entity.RegistrationCount{}, errors.New("email is not a string")
+	}
+
+	registratoinCounter, err := s.registrationRepository.FindTotalRegistrationByAdvisorEmail(ctx, emailString, tx)
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	return registratoinCounter, nil
 }
 
 func (s *registrationService) createReportSchedules(ctx context.Context, registration entity.Registration, token string) error {
