@@ -85,6 +85,10 @@ func (r *registrationRepository) FindTotalRegistrationByAdvisorEmail(ctx context
 		Where("created_at BETWEEN ? AND ?", time.Now().AddDate(0, -2, 0), time.Now().AddDate(0, -1, 0)).
 		Count(&lastMonth).Error
 
+	if lastMonth == int64(0) {
+		lastMonth = int64(1)
+	}
+
 	totalPercentageFromLastMonth = (thisMonth / lastMonth) * 100
 
 	if err != nil {
@@ -113,6 +117,10 @@ func (r *registrationRepository) FindTotalRegistrationByAdvisorEmail(ctx context
 
 	if err != nil {
 		return entity.RegistrationCount{}, err
+	}
+
+	if lastMonthApproved == int64(0) {
+		lastMonthApproved = int64(1)
 	}
 
 	totalApprovedPercentageFromLastMonth = (thisMonthApproved / lastMonthApproved) * 100
