@@ -70,6 +70,25 @@ type mockRegistrationService struct {
 	monitoringManagementService *service_mock.MockMonitoringManagementService
 }
 
+func (s *mockRegistrationService) FindTotalRegistrationByAdvisorEmail(ctx context.Context, token string, tx *gorm.DB) (entity.RegistrationCount, error) {
+
+	userData := s.userManagementService.GetUserData("GET", token)
+
+	email := userData["email"]
+	emailString, ok := email.(string)
+	if !ok {
+		return entity.RegistrationCount{}, errors.New("email is not a string")
+	}
+
+	registratoinCounter, err := s.registrationRepository.FindTotalRegistrationByAdvisorEmail(ctx, emailString, tx)
+
+	if err != nil {
+		return entity.RegistrationCount{}, err
+	}
+
+	return registratoinCounter, nil
+}
+
 func (s *mockRegistrationService) FindAllRegistrations(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, tx *gorm.DB, token string) ([]dto.GetRegistrationResponse, dto.PaginationResponse, error) {
 	registrations, total, err := s.registrationRepository.Index(ctx, tx, pagReq, filter)
 	if err != nil {
@@ -3460,4 +3479,119 @@ func (suite *RegistrationServiceTestSuite) TestGetStudentRegistrationsWithTransc
 	suite.mockUserManagementService.AssertExpectations(suite.T())
 	suite.mockRegistrationRepo.AssertExpectations(suite.T())
 	suite.mockMatchingManagementService.AssertExpectations(suite.T())
+}
+
+// TestFindTotalRegistrationByAdvisorEmailSuccess tests successful retrieval of registration count
+func (suite *RegistrationServiceTestSuite) TestFindTotalRegistrationByAdvisorEmailSuccess() {
+	// Setup test data
+	ctx := context.Background()
+	token := "Bearer test-token"
+	advisorEmail := "advisor@example.com"
+
+	// Mock user data
+	userData := map[string]interface{}{
+		"id":    "advisor123",
+		"role":  "DOSEN PEMBIMBING",
+		"email": advisorEmail,
+	}
+
+	// Mock registration count
+	expectedCount := entity.RegistrationCount{
+		Total: 5,
+	}
+
+	// Setup mocks
+	suite.mockUserManagementService.On("GetUserData", "GET", token).Return(userData)
+	suite.mockRegistrationRepo.On("FindTotalRegistrationByAdvisorEmail", ctx, advisorEmail, mock.Anything).Return(expectedCount, nil)
+
+	// Call the method
+	result, err := suite.service.FindTotalRegistrationByAdvisorEmail(ctx, token, nil)
+
+	// Assertions
+	suite.NoError(err)
+	suite.Equal(expectedCount, result)
+	suite.Equal(int64(5), result.Total)
+
+	suite.mockUserManagementService.AssertExpectations(suite.T())
+	suite.mockRegistrationRepo.AssertExpectations(suite.T())
+}
+
+// TestFindTotalRegistrationByAdvisorEmailInvalidEmail tests error when email is not a string
+func (suite *RegistrationServiceTestSuite) TestFindTotalRegistrationByAdvisorEmailInvalidEmail() {
+	// Setup test data
+	ctx := context.Background()
+	token := "Bearer test-token"
+
+	// Mock user data with invalid email type
+	userData := map[string]interface{}{
+		"id":    "advisor123",
+		"role":  "DOSEN PEMBIMBING",
+		"email": 123, // Invalid type, should be string
+	}
+
+	// Setup mocks
+	suite.mockUserManagementService.On("GetUserData", "GET", token).Return(userData)
+
+	// Call the method
+	result, err := suite.service.FindTotalRegistrationByAdvisorEmail(ctx, token, nil)
+
+	// Assertions
+	suite.Error(err)
+	suite.Equal("email is not a string", err.Error())
+	suite.Equal(entity.RegistrationCount{}, result)
+
+	suite.mockUserManagementService.AssertExpectations(suite.T())
+}
+
+// TestFindTotalRegistrationByAdvisorEmailRepositoryError tests error from repository
+func (suite *RegistrationServiceTestSuite) TestFindTotalRegistrationByAdvisorEmailRepositoryError() {
+	// Setup test data
+	ctx := context.Background()
+	token := "Bearer test-token"
+	advisorEmail := "advisor@example.com"
+
+	// Mock user data
+	userData := map[string]interface{}{
+		"id":    "advisor123",
+		"role":  "DOSEN PEMBIMBING",
+		"email": advisorEmail,
+	}
+
+	// Mock repository error
+	expectedError := errors.New("database error")
+
+	// Setup mocks
+	suite.mockUserManagementService.On("GetUserData", "GET", token).Return(userData)
+	suite.mockRegistrationRepo.On("FindTotalRegistrationByAdvisorEmail", ctx, advisorEmail, mock.Anything).Return(entity.RegistrationCount{}, expectedError)
+
+	// Call the method
+	result, err := suite.service.FindTotalRegistrationByAdvisorEmail(ctx, token, nil)
+
+	// Assertions
+	suite.Error(err)
+	suite.Equal(expectedError, err)
+	suite.Equal(entity.RegistrationCount{}, result)
+
+	suite.mockUserManagementService.AssertExpectations(suite.T())
+	suite.mockRegistrationRepo.AssertExpectations(suite.T())
+}
+
+// TestFindTotalRegistrationByAdvisorEmailNilUserData tests error when user data is nil
+func (suite *RegistrationServiceTestSuite) TestFindTotalRegistrationByAdvisorEmailNilUserData() {
+	// Setup test data
+	ctx := context.Background()
+	token := "Bearer test-token"
+
+	// Mock nil user data
+	suite.mockUserManagementService.On("GetUserData", "GET", token).Return(nil)
+
+	// Call the method
+	result, err := suite.service.FindTotalRegistrationByAdvisorEmail(ctx, token, nil)
+
+	// Assertions
+	suite.Error(err)
+	suite.Equal("email is not a string", err.Error())
+	suite.Equal(entity.RegistrationCount{}, result)
+
+	suite.mockUserManagementService.AssertExpectations(suite.T())
 }

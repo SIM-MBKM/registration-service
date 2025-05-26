@@ -14,6 +14,11 @@ type MockRegistrationRepository struct {
 	mock.Mock
 }
 
+func (m *MockRegistrationRepository) FindTotalRegistrationByAdvisorEmail(ctx context.Context, email string, tx *gorm.DB) (entity.RegistrationCount, error) {
+	args := m.Called(ctx, email, tx)
+	return args.Get(0).(entity.RegistrationCount), args.Error(1)
+}
+
 // Index mocks the Index method
 func (m *MockRegistrationRepository) Index(ctx context.Context, tx *gorm.DB, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest) ([]entity.Registration, int64, error) {
 	args := m.Called(ctx, tx, pagReq, filter)
