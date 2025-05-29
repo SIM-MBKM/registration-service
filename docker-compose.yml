@@ -19,8 +19,8 @@ services:
   nginx: 
     image: nginx:alpine
     ports:
-      - 8081:80
-      - 8443:443
+      - 8082:80
+      - 8444:443
     depends_on:
       - app
     restart: unless-stopped
