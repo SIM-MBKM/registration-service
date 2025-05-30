@@ -692,9 +692,9 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return errors.New("this activity is not open for registration")
 	}
 
-	if userData["id"] != "" {
+	if userData["nrp"] != "" {
 		usersData = s.userManagementService.GetUserByFilter(map[string]interface{}{
-			"user_id": userData["id"],
+			"user_nrp": userData["nrp"],
 		}, "POST", token)
 	}
 
