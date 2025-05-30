@@ -12,11 +12,11 @@ type UserManagementService struct {
 }
 
 const (
-	GET_USER_BY_ID_ENDPOINT          = "user-management-service/api/user"
-	GET_USER_BY_FILTER_ENDPOINT      = "user-management-service/api/v1/user/filter"
-	GET_USER_ROLE_ENDPOINT           = "user-management-service/api/v1/user/role"
-	GET_USER_DATA_ENDPOINT           = "user-management-service/api/v1/user"
-	GET_DOSEN_DATA_BY_EMAIL_ENDPOINT = "user-management-service/api/v1/dosen/email"
+	GET_USER_BY_ID_ENDPOINT          = "api/v1/user/service/by-user-id"
+	GET_USER_BY_FILTER_ENDPOINT      = "api/v1/user/service/users-all"
+	GET_USER_ROLE_ENDPOINT           = "api/v1/user/service/users/me/role"
+	GET_USER_DATA_ENDPOINT           = "api/v1/user/service/users/me"
+	GET_DOSEN_DATA_BY_EMAIL_ENDPOINT = "api/v1/user/service/by-email/"
 )
 
 func NewUserManagementService(baseURI string, asyncURIs []string) *UserManagementService {
@@ -121,7 +121,7 @@ func (s *UserManagementService) GetUserRole(method string, token string) map[str
 	return rolesData
 }
 
-func (s *UserManagementService) GetDosenDataByEmail(data map[string]interface{}, method string, token string) map[string]interface{} {
+func (s *UserManagementService) GetDosenDataByEmail(email string, method string, token string) map[string]interface{} {
 	// split token
 	tokenParts := strings.Split(token, " ")
 	if len(tokenParts) != 2 {
@@ -130,7 +130,9 @@ func (s *UserManagementService) GetDosenDataByEmail(data map[string]interface{},
 
 	token = tokenParts[1]
 
-	res, err := s.baseService.Request(method, GET_DOSEN_DATA_BY_EMAIL_ENDPOINT, data, token)
+	endpoint := GET_DOSEN_DATA_BY_EMAIL_ENDPOINT + email
+
+	res, err := s.baseService.Request(method, endpoint, nil, token)
 	if err != nil {
 		return nil
 	}
@@ -142,10 +144,11 @@ func (s *UserManagementService) GetDosenDataByEmail(data map[string]interface{},
 
 	var dosenData map[string]interface{}
 	dosenData = map[string]interface{}{
-		"id":    dosen["id"],
-		"nip":   dosen["nrp"],
-		"name":  dosen["name"],
-		"email": dosen["email"],
+		"id":           dosen["id"],
+		"auth_user_id": dosen["auth_user_id"],
+		"nip":          dosen["nrp"],
+		"name":         dosen["name"],
+		"email":        dosen["email"],
 	}
 	return dosenData
 }
