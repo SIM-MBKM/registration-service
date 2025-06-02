@@ -10,6 +10,7 @@ import (
 	"registration-service/entity"
 	"registration-service/helper"
 	"registration-service/repository"
+	"strings"
 	"time"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
@@ -291,7 +292,7 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			"message":        message,
 		}, "POST", token)
 
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
 			return err
 		}
 
@@ -729,93 +730,91 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	// because user can only register in one semester of academic year (2024/2025)
 	// use
 	registrationsByNRP, err := s.registrationRepository.FindByNRP(ctx, userData["nrp"].(string), tx)
-	if err != nil {
-		return errors.New("data not found")
-	}
 
-	if registrationsByNRP.ActivityID == registration.ActivityID {
-		return errors.New("user already registered")
-	} else if registrationsByNRP.ActivityID != registration.ActivityID && registrationsByNRP.ActivityID != "" {
-		log.Println("REGISTRATION EXISTS BUT DIFFERENT ACTIVITY ID", registrationsByNRP.ActivityID, registration.ActivityID)
-		// get activity data by registrationsByNRP.ActivityID
-		if registrationsByNRP.ActivityID != "" {
-			activitiesDataOld = s.activityManagementService.GetActivitiesData(map[string]interface{}{
-				"activity_id":     registrationsByNRP.ActivityID,
-				"program_type_id": "",
-				"level_id":        "",
-				"group_id":        "",
-				"name":            "",
-			}, "POST", token)
-			log.Println("ACTIVITIES DATA OLD", activitiesDataOld)
-		}
+	if registrationsByNRP.ActivityID != "00000000-0000-0000-0000-000000000000" || (err != nil && err.Error() == "record not found") {
+		if registrationsByNRP.ActivityID == registration.ActivityID {
+			return errors.New("user already registered")
+		} else if registrationsByNRP.ActivityID != registration.ActivityID && registrationsByNRP.ActivityID != "" {
+			log.Println("REGISTRATION EXISTS BUT DIFFERENT ACTIVITY ID", registrationsByNRP.ActivityID, registration.ActivityID)
+			// get activity data by registrationsByNRP.ActivityID
+			if registrationsByNRP.ActivityID != "" {
+				activitiesDataOld = s.activityManagementService.GetActivitiesData(map[string]interface{}{
+					"activity_id":     registrationsByNRP.ActivityID,
+					"program_type_id": "",
+					"level_id":        "",
+					"group_id":        "",
+					"name":            "",
+				}, "POST", token)
+				log.Println("ACTIVITIES DATA OLD", activitiesDataOld)
+			}
+			// Check if activitiesDataOld has valid data
+			if len(activitiesDataOld) == 0 {
+				return errors.New("old activity data not found")
+			}
 
-		// Check if activitiesDataOld has valid data
-		if len(activitiesDataOld) == 0 {
-			return errors.New("old activity data not found")
-		}
+			// Safely parse the old activity start date and duration
+			var activityOldStartDate time.Time
+			var activityOldMonthsDuration int
 
-		// Safely parse the old activity start date and duration
-		var activityOldStartDate time.Time
-		var activityOldMonthsDuration int
-
-		// Handle start_date - could be string or another format
-		if startDateVal, ok := activitiesDataOld[0]["start_period"]; ok && startDateVal != nil {
-			// Try to parse as RFC3339 if it's a string
-			if startDateStr, ok := startDateVal.(string); ok {
-				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
-				if err != nil {
-					return errors.New("invalid start_period format in old activity")
+			// Handle start_date - could be string or another format
+			if startDateVal, ok := activitiesDataOld[0]["start_period"]; ok && startDateVal != nil {
+				// Try to parse as RFC3339 if it's a string
+				if startDateStr, ok := startDateVal.(string); ok {
+					parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+					if err != nil {
+						return errors.New("invalid start_period format in old activity")
+					}
+					activityOldStartDate = parsedTime
+				} else if startDate, ok := startDateVal.(time.Time); ok {
+					// It's already a time.Time
+					activityOldStartDate = startDate
+				} else {
+					return errors.New("invalid start_period type in old activity")
 				}
-				activityOldStartDate = parsedTime
-			} else if startDate, ok := startDateVal.(time.Time); ok {
-				// It's already a time.Time
-				activityOldStartDate = startDate
 			} else {
-				return errors.New("invalid start_period type in old activity")
+				return errors.New("start_period not found in old activity")
 			}
-		} else {
-			return errors.New("start_period not found in old activity")
-		}
 
-		// Handle months_duration - could be float64 or int
-		if durationVal, ok := activitiesDataOld[0]["months_duration"]; ok && durationVal != nil {
-			switch v := durationVal.(type) {
-			case int:
-				activityOldMonthsDuration = v
-			case float64:
-				activityOldMonthsDuration = int(v)
-			default:
-				return errors.New("invalid months_duration type in old activity")
-			}
-		} else {
-			return errors.New("months_duration not found in old activity")
-		}
-
-		activityOldEndDate := activityOldStartDate.AddDate(0, activityOldMonthsDuration, 0)
-
-		// Similarly handle start_date for the new activity
-		var activityNewStartDate time.Time
-		if startDateVal, ok := activitiesData[0]["start_period"]; ok && startDateVal != nil {
-			// Try to parse as RFC3339 if it's a string
-			if startDateStr, ok := startDateVal.(string); ok {
-				parsedTime, err := time.Parse(time.RFC3339, startDateStr)
-				if err != nil {
-					return errors.New("invalid start_period format in new activity")
+			// Handle months_duration - could be float64 or int
+			if durationVal, ok := activitiesDataOld[0]["months_duration"]; ok && durationVal != nil {
+				switch v := durationVal.(type) {
+				case int:
+					activityOldMonthsDuration = v
+				case float64:
+					activityOldMonthsDuration = int(v)
+				default:
+					return errors.New("invalid months_duration type in old activity")
 				}
-				activityNewStartDate = parsedTime
-			} else if startDate, ok := startDateVal.(time.Time); ok {
-				// It's already a time.Time
-				activityNewStartDate = startDate
 			} else {
-				return errors.New("invalid start_period type in new activity")
+				return errors.New("months_duration not found in old activity")
 			}
-		} else {
-			return errors.New("start_period not found in new activity")
-		}
 
-		// if activity new start date is after activity old end date then user can register
-		if !activityNewStartDate.After(activityOldEndDate) {
-			return errors.New("user already registered for an overlapping activity period")
+			activityOldEndDate := activityOldStartDate.AddDate(0, activityOldMonthsDuration, 0)
+
+			// Similarly handle start_date for the new activity
+			var activityNewStartDate time.Time
+			if startDateVal, ok := activitiesData[0]["start_period"]; ok && startDateVal != nil {
+				// Try to parse as RFC3339 if it's a string
+				if startDateStr, ok := startDateVal.(string); ok {
+					parsedTime, err := time.Parse(time.RFC3339, startDateStr)
+					if err != nil {
+						return errors.New("invalid start_period format in new activity")
+					}
+					activityNewStartDate = parsedTime
+				} else if startDate, ok := startDateVal.(time.Time); ok {
+					// It's already a time.Time
+					activityNewStartDate = startDate
+				} else {
+					return errors.New("invalid start_period type in new activity")
+				}
+			} else {
+				return errors.New("start_period not found in new activity")
+			}
+
+			// if activity new start date is after activity old end date then user can register
+			if !activityNewStartDate.After(activityOldEndDate) {
+				return errors.New("user already registered for an overlapping activity period")
+			}
 		}
 	}
 
@@ -925,7 +924,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		"message":        message,
 	}, "POST", token)
 
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
 		return err
 	}
 
