@@ -193,26 +193,28 @@ func (s *registrationService) LORegistrationApproval(ctx context.Context, token 
 			return err
 		}
 
-		userData := s.userManagementService.GetUserData("GET", token)
-
-		userEmail := userData["email"]
-		userName := userData["name"]
-		message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, "LO-MBKM")
-
 		// get mahasiswa data
 		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
 			"user_nrp": registration.UserNRP,
 		}, "POST", token)
 
-		mahasiswaEmail := mahasiswaData[0]["email"]
+		if mahasiswaData != nil || len(mahasiswaData) != 0 {
+			userData := s.userManagementService.GetUserData("GET", token)
 
-		err = s.brokerService.SendNotification(map[string]interface{}{
-			"sender_name":    userName,
-			"sender_email":   userEmail,
-			"receiver_email": mahasiswaEmail,
-			"type":           "APPROVAL REGISTRATION",
-			"message":        message,
-		}, "POST", token)
+			userEmail := userData["email"]
+			userName := userData["name"]
+			message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, "LO-MBKM")
+
+			mahasiswaEmail := mahasiswaData[0]["email"]
+
+			err = s.brokerService.SendNotification(map[string]interface{}{
+				"sender_name":    userName,
+				"sender_email":   userEmail,
+				"receiver_email": mahasiswaEmail,
+				"type":           "APPROVAL REGISTRATION",
+				"message":        message,
+			}, "POST", token)
+		}
 
 	}
 
@@ -270,31 +272,33 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 		if err != nil {
 			return err
 		}
-
-		userData := s.userManagementService.GetUserData("GET", token)
-
-		userEmail := userData["email"]
-		userName := userData["name"]
-		message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, userName)
-
-		// get mahasiswa data
 		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
 			"user_nrp": registration.UserNRP,
 		}, "POST", token)
 
-		mahasiswaEmail := mahasiswaData[0]["email"]
+		if mahasiswaData != nil || len(mahasiswaData) != 0 {
+			userData := s.userManagementService.GetUserData("GET", token)
 
-		err = s.brokerService.SendNotification(map[string]interface{}{
-			"sender_name":    userName,
-			"sender_email":   userEmail,
-			"receiver_email": mahasiswaEmail,
-			"type":           "APPROVAL REGISTRATION",
-			"message":        message,
-		}, "POST", token)
+			userEmail := userData["email"]
+			userName := userData["name"]
+			message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, userName)
 
-		if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
-			return err
+			// get mahasiswa data
+			mahasiswaEmail := mahasiswaData[0]["email"]
+
+			err = s.brokerService.SendNotification(map[string]interface{}{
+				"sender_name":    userName,
+				"sender_email":   userEmail,
+				"receiver_email": mahasiswaEmail,
+				"type":           "APPROVAL REGISTRATION",
+				"message":        message,
+			}, "POST", token)
+
+			if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
+				return err
+			}
 		}
+		// mahasiswaEmail := mahasiswaData[0]["email"]
 
 	}
 
@@ -666,7 +670,7 @@ func (s *registrationService) FindRegistrationByID(ctx context.Context, id strin
 func (s *registrationService) CreateRegistration(ctx context.Context, registration dto.CreateRegistrationRequest, file *multipart.FileHeader, geoletter *multipart.FileHeader, tx *gorm.DB, token string) error {
 	var registrationEntity entity.Registration
 	var activitiesData []map[string]interface{}
-	var usersData []map[string]interface{}
+	// var usersData []map[string]interface{}
 	var activitiesDataOld []map[string]interface{}
 	// get user data
 	userData := s.userManagementService.GetUserData("GET", token)
@@ -693,13 +697,13 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return errors.New("this activity is not open for registration")
 	}
 
-	if userData["nrp"] != "" {
-		usersData = s.userManagementService.GetUserByFilter(map[string]interface{}{
-			"user_nrp": userData["nrp"],
-		}, "POST", token)
-	}
+	// if userData["nrp"] != "" {
+	// 	usersData = s.userManagementService.GetUserByFilter(map[string]interface{}{
+	// 		"user_nrp": userData["nrp"],
+	// 	}, "POST", token)
+	// }
 
-	if len(activitiesData) == 0 || len(usersData) == 0 {
+	if len(activitiesData) == 0 {
 		return errors.New("data not found")
 	}
 
@@ -829,7 +833,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	var userNRP string
-	if nrp, ok := usersData[0]["nrp"]; ok && nrp != nil {
+	if nrp, ok := userData["nrp"]; ok && nrp != nil {
 		userNRP, ok = nrp.(string)
 		if !ok {
 			return errors.New("User not found") // Default value if type assertion fails
@@ -839,7 +843,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 	}
 
 	var userName string
-	if name, ok := usersData[0]["name"]; ok && name != nil {
+	if name, ok := userData["name"]; ok && name != nil {
 		userName, ok = name.(string)
 		if !ok {
 			return errors.New("User not found") // Default value if type assertion fails
@@ -913,7 +917,7 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		return err
 	}
 
-	userEmail := usersData[0]["email"]
+	userEmail := userData["email"]
 	message := fmt.Sprintf("%s has registered for %s", userName, activityName)
 	// send notification to academic advisor
 	err = s.brokerService.SendNotification(map[string]interface{}{
