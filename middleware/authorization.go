@@ -28,7 +28,7 @@ func AuthorizationRole(userService service.UserManagementService, role []string)
 		if role, ok := res["role"]; ok && role != nil {
 			userRole, ok = role.(string)
 			if !ok {
-				
+				log.Println("Error: role is not a string")
 				c.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
 					Status:  dto.STATUS_ERROR,
 					Message: dto.MESSAGE_UNAUTHORIZED,
@@ -36,6 +36,7 @@ func AuthorizationRole(userService service.UserManagementService, role []string)
 				return
 			}
 		} else {
+			log.Println("Error: role not found in response")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
 				Status:  dto.STATUS_ERROR,
 				Message: dto.MESSAGE_UNAUTHORIZED,
@@ -53,6 +54,7 @@ func AuthorizationRole(userService service.UserManagementService, role []string)
 		}
 
 		if !isRole {
+			log.Println("Error: user does not have the required role")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
 				Status:  dto.STATUS_ERROR,
 				Message: dto.MESSAGE_FORBIDDEN,
