@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"registration-service/dto"
 	"registration-service/service"
@@ -21,11 +22,13 @@ func AuthorizationRole(userService service.UserManagementService, role []string)
 		}
 
 		res := userService.GetUserRole("GET", token)
+		log.Println("Authorization Role Response:", res)
 
 		var userRole string
 		if role, ok := res["role"]; ok && role != nil {
 			userRole, ok = role.(string)
 			if !ok {
+				
 				c.AbortWithStatusJSON(http.StatusUnauthorized, dto.Response{
 					Status:  dto.STATUS_ERROR,
 					Message: dto.MESSAGE_UNAUTHORIZED,
