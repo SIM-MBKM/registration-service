@@ -44,15 +44,16 @@ RUN CGO_ENABLED=0 \
 # Production Stage - Option 1: Distroless (Recommended untuk HTTP-only)
 FROM gcr.io/distroless/static-debian12:nonroot AS production-distroless
 
+# Set working directory
+WORKDIR /app
+
 # Copy timezone data untuk proper time handling
 COPY --from=build-stage /usr/share/zoneinfo /usr/share/zoneinfo
 
-# Copy binary
-COPY --from=build-stage /app/main /main
-
-# Copy configuration files
-COPY --from=build-stage /app/.env /.env
-COPY --from=build-stage /app/gcs-secret-key.json /gcs-secret-key.json
+# Copy binary dan configuration files
+COPY --from=build-stage /app/main /app/main
+COPY --from=build-stage /app/.env /app/.env
+COPY --from=build-stage /app/gcs-secret-key.json /app/gcs-secret-key.json
 
 # Set timezone
 ENV TZ=Asia/Jakarta
@@ -61,7 +62,7 @@ ENV TZ=Asia/Jakarta
 EXPOSE 8002
 
 # Run as non-root user (distroless default)
-ENTRYPOINT ["/main"]
+ENTRYPOINT ["/app/main"]
 
 # Production Stage - Option 2: Alpine (Alternative untuk debugging)
 FROM alpine:3.19 AS production-alpine
@@ -112,10 +113,10 @@ COPY --from=build-stage /usr/share/zoneinfo /usr/share/zoneinfo
 # Copy passwd file untuk user info
 COPY --from=build-stage /etc/passwd /etc/passwd
 
-# Copy binary dan config
-COPY --from=build-stage /app/main /main
-COPY --from=build-stage /app/.env /.env
-COPY --from=build-stage /app/gcs-secret-key.json /gcs-secret-key.json
+# Copy binary dan config ke /app directory
+COPY --from=build-stage /app/main /app/main
+COPY --from=build-stage /app/.env /app/.env
+COPY --from=build-stage /app/gcs-secret-key.json /app/gcs-secret-key.json
 
 # Set timezone
 ENV TZ=Asia/Jakarta
@@ -126,4 +127,4 @@ EXPOSE 8002
 # Run as non-root (user nobody = uid 65534)
 USER 65534:65534
 
-ENTRYPOINT ["/main"]
+ENTRYPOINT ["/app/main"]
