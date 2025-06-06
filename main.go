@@ -22,9 +22,13 @@ func main() {
 	expireSeconds, _ := strconv.ParseInt(baseServiceHelpers.GetEnv("APP_KEY_EXPIRE_SECONDS", "9999"), 10, 64)
 
 	userManagementServiceURI := helpers.GetEnv("USER_MANAGEMENT_BASE_URI", "http://localhost:8086")
+	log.Println("User Management Service URI:", userManagementServiceURI)
 	activityManagementServiceURI := helpers.GetEnv("ACTIVITY_MANAGEMENT_BASE_URI", "http://localhost:8088")
+	log.Println("Activity Management Service URI:", activityManagementServiceURI)
 	matchingManagementServiceURI := helpers.GetEnv("MATCHING_MANAGEMENT_BASE_URI", "http://localhost:8087")
+	log.Println("Matching Management Service URI:", matchingManagementServiceURI)
 	monitoringManagementServiceURI := helpers.GetEnv("MONITORING_MANAGEMENT_BASE_URI", "http://localhost:8089")
+	log.Println("Monitoring Management Service URI:", monitoringManagementServiceURI)
 	brokerbaseURI := helpers.GetEnv("BROKER_BASE_URI", "http://localhost:8099")
 
 	db := localConfig.SetupDatabaseConnection()
