@@ -6,6 +6,7 @@ services:
     build: 
       context: .
       dockerfile: Dockerfile
+      target: production-alpine
     ports:
       - ${GOLANG_PORT}:${GOLANG_PORT}
     restart: always
