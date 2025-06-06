@@ -1,4 +1,3 @@
-
 # Multi-stage Dockerfile untuk Golang service
 # Optimized untuk container-to-container communication
 
@@ -41,9 +40,6 @@ RUN CGO_ENABLED=0 \
     -ldflags='-w -s -extldflags "-static"' \
     -trimpath \
     -o main .
-
-# Verify binary adalah static
-RUN file main && (ldd main 2>&1 | grep -q "not a dynamic executable" || echo "Warning: Binary might not be static")
 
 # Production Stage - Option 1: Distroless (Recommended untuk HTTP-only)
 FROM gcr.io/distroless/static-debian12:nonroot AS production-distroless
