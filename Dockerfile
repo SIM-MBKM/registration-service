@@ -3,7 +3,7 @@
 # Optimized untuk container-to-container communication
 
 # Build Stage
-FROM golang:1.21-alpine AS build-stage
+FROM golang:1.23-alpine AS build-stage
 
 # Install dependencies untuk build
 RUN apk update && apk upgrade && \

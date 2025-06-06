@@ -1,7 +1,5 @@
 FROM nginx:alpine
 
-FROM nginx:alpine
-
 # Remove default config FIRST
 RUN rm -f /etc/nginx/conf.d/default.conf
 
