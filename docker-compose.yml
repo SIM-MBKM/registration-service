@@ -10,8 +10,8 @@ services:
     ports:
       - ${GOLANG_PORT}:${GOLANG_PORT}
     restart: always
-    volumes:
-      - ./:/app
+    # volumes:
+    #   - ./:/app
     networks:
       - microservices-db-dev  # Consistent network name
     env_file:
