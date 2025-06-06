@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	localConfig "registration-service/config"
 	"registration-service/helper"
 	"registration-service/middleware"
@@ -30,6 +31,7 @@ func main() {
 	monitoringManagementServiceURI := helpers.GetEnv("MONITORING_MANAGEMENT_BASE_URI", "http://localhost:8089")
 	log.Println("Monitoring Management Service URI:", monitoringManagementServiceURI)
 	brokerbaseURI := helpers.GetEnv("BROKER_BASE_URI", "http://localhost:8099")
+	log.Println("Broker Base URI:", brokerbaseURI)
 
 	db := localConfig.SetupDatabaseConnection()
 
