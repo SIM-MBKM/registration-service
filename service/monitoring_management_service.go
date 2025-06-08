@@ -50,6 +50,8 @@ func (s *MonitoringManagementService) GetReportSchedulesByRegistrationID(registr
 			return nil, errors.New("failed to convert to map")
 		}
 		return result, nil
+	} else {
+		return nil, nil
 	}
 
 	return res, nil
