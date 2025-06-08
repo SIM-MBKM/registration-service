@@ -15,15 +15,41 @@ type MonitoringManagementService struct {
 
 const (
 	// MatchingManagementServiceBaseURI is the base URI for the matching management service
-	CREATE_REPORT_SCHEDULE            = "monitoring-service/api/v1/report-schedules/"
-	GET_TRANSCRIPT_BY_REGISTRATION_ID = "monitoring-service/api/v1/transcripts/registrations/"
-	GET_SYLLABUS_BY_REGISTRATION_ID   = "monitoring-service/api/v1/syllabuses/registrations/"
+	CREATE_REPORT_SCHEDULE                  = "monitoring-service/api/v1/report-schedules/"
+	GET_REPORT_SCHEDULES_BY_REGISTRATION_ID = "monitoring-service/api/v1/report-schedules/registrations/"
+	GET_TRANSCRIPT_BY_REGISTRATION_ID       = "monitoring-service/api/v1/transcripts/registrations/"
+	GET_SYLLABUS_BY_REGISTRATION_ID         = "monitoring-service/api/v1/syllabuses/registrations/"
 )
 
 func NewMonitoringManagementService(baseURI string, asyncURIs []string) *MonitoringManagementService {
 	return &MonitoringManagementService{
 		baseService: baseService.NewService(baseURI, asyncURIs),
 	}
+}
+
+func (s *MonitoringManagementService) GetReportSchedulesByRegistrationID(registrationID string, token string) (interface{}, error) {
+	// split token
+	tokenParts := strings.Split(token, " ")
+	if len(tokenParts) != 2 {
+		return nil, errors.New("invalid token")
+	}
+
+	token = tokenParts[1]
+
+	endpoint := fmt.Sprintf("%s%s/report-schedules", GET_REPORT_SCHEDULES_BY_REGISTRATION_ID, registrationID)
+	res, err := s.baseService.Request("GET", endpoint, nil, token)
+	log.Println("GetReportSchedulesByRegistrationID", res)
+	if err != nil {
+		log.Println("Error in GetReportSchedulesByRegistrationID:", err)
+		return nil, err
+	}
+	result, ok := res["data"].(interface{})
+	if !ok {
+		log.Println("Failed to convert response to map in GetReportSchedulesByRegistrationID")
+		return nil, errors.New("failed to convert to map")
+	}
+
+	return result, nil
 }
 
 func (s *MonitoringManagementService) GetSyllabusByRegistrationID(registrationID string, token string) (interface{}, error) {

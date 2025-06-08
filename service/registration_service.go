@@ -10,7 +10,6 @@ import (
 	"registration-service/entity"
 	"registration-service/helper"
 	"registration-service/repository"
-	"strings"
 	"time"
 
 	storageService "github.com/SIM-MBKM/filestorage/storage"
@@ -252,11 +251,19 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 			registration.AcademicAdvisorValidation = "APPROVED"
 			if registration.LOValidation == "APPROVED" {
 				registration.ApprovalStatus = true
-				// Create report schedules when both validations are approved
-				err = s.createReportSchedules(ctx, registration, token)
+				res, err := s.monitoringManagementService.GetReportSchedulesByRegistrationID(registration.ID.String(), token)
 				if err != nil {
+					log.Println("ERROR GETTING REPORT SCHEDULES", err)
 					return err
 				}
+				if res == nil {
+					err = s.createReportSchedules(ctx, registration, token)
+					if err != nil {
+						return err
+					}
+				}
+
+				// Create report schedules when both validations are approved
 			}
 		}
 		if approval.Status == "REJECTED" {
@@ -294,9 +301,9 @@ func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, t
 				"message":        message,
 			}, "POST", token)
 
-			if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
-				return err
-			}
+			// if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
+			// 	return err
+			// }
 		}
 		// mahasiswaEmail := mahasiswaData[0]["email"]
 
@@ -928,9 +935,9 @@ func (s *registrationService) CreateRegistration(ctx context.Context, registrati
 		"message":        message,
 	}, "POST", token)
 
-	if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
-		return err
-	}
+	// if err != nil && !strings.Contains(err.Error(), "202 Accepted") {
+	// 	return err
+	// }
 
 	return nil
 }
