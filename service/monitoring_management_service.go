@@ -43,13 +43,16 @@ func (s *MonitoringManagementService) GetReportSchedulesByRegistrationID(registr
 		log.Println("Error in GetReportSchedulesByRegistrationID:", err)
 		return nil, err
 	}
-	result, ok := res["data"].(interface{})
-	if !ok {
-		log.Println("Failed to convert response to map in GetReportSchedulesByRegistrationID")
-		return nil, errors.New("failed to convert to map")
+	if res["data"] != nil {
+		result, ok := res["data"].(interface{})
+		if !ok {
+			log.Println("Failed to convert response to map in GetReportSchedulesByRegistrationID")
+			return nil, errors.New("failed to convert to map")
+		}
+		return result, nil
 	}
 
-	return result, nil
+	return res, nil
 }
 
 func (s *MonitoringManagementService) GetSyllabusByRegistrationID(registrationID string, token string) (interface{}, error) {
