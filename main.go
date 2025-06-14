@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"registration-service/config"
 	localConfig "registration-service/config"
 	"registration-service/helper"
 	"registration-service/middleware"
@@ -17,6 +18,7 @@ import (
 
 func main() {
 	baseServiceHelpers.LoadEnv()
+	cfg := config.LoadConfig()
 	secretKeyService := baseServiceHelpers.GetEnv("APP_KEY", "secret")
 	port := baseServiceHelpers.GetEnv("GOLANG_PORT", "8088")
 
@@ -58,9 +60,18 @@ func main() {
 
 	defer localConfig.CloseDatabaseConnection(db)
 
+	frontendConfig := securityMiddleware.FrontendConfig{
+		AllowedOrigins:    cfg.FrontendAllowedOrigins,
+		AllowedReferers:   cfg.FrontendAllowedReferers,
+		RequireOrigin:     cfg.FrontendRequireOrigin,
+		BypassForBrowsers: cfg.FrontendBypassBrowsers,
+		CustomHeader:      cfg.FrontendCustomHeader,
+		CustomHeaderValue: cfg.FrontendCustomHeaderValue,
+	}
+
 	server := localConfig.NewServer()
 	server.Use(middleware.CORS())
-	server.Use(securityMiddleware.AccessKeyMiddleware(secretKeyService, expireSeconds))
+	server.Use(securityMiddleware.AccessKeyMiddleware(secretKeyService, expireSeconds, &frontendConfig))
 
 	userService := service.NewUserManagementService(userManagementServiceURI, []string{"/async"})
 

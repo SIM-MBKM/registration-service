@@ -7,7 +7,7 @@ toolchain go1.23.7
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/SIM-MBKM/filestorage v0.1.0
-	github.com/SIM-MBKM/mod-service v1.0.6
+	github.com/SIM-MBKM/mod-service v1.0.8
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
