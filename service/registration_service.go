@@ -48,6 +48,8 @@ type RegistrationService interface {
 	FindRegistrationsWithMatching(ctx context.Context, pagReq dto.PaginationRequest, filter dto.FilterRegistrationRequest, token string, tx *gorm.DB) (dto.StudentRegistrationsWithMatchingResponse, dto.PaginationResponse, error)
 	CheckRegistrationEligibility(ctx context.Context, activityID string, token string, tx *gorm.DB) (dto.RegistrationEligibilityResponse, error)
 	FindTotalRegistrationByAdvisorEmail(ctx context.Context, token string, tx *gorm.DB) (entity.RegistrationCount, error)
+	handlePostApprovalTasks(ctx context.Context, registration entity.Registration, token string, status string)
+	sendApprovalNotification(ctx context.Context, registration entity.Registration, token string, status string)
 }
 
 func NewRegistrationService(registrationRepository repository.RegistrationRepository, documentRepository repository.DocumentRepository, secretKey string, userManagementbaseURI string, activityManagementbaseURI string, matchingManagementbaseURI string, monitoringManagementbaseURI string, brokerbaseURI string, asyncURIs []string, config *storageService.Config, tokenManager *storageService.CacheTokenManager) RegistrationService {
@@ -153,71 +155,185 @@ func (s *registrationService) createReportSchedules(ctx context.Context, registr
 	return nil
 }
 
+// func (s *registrationService) LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
+// 	for _, id := range approval.ID {
+// 		registration, err := s.registrationRepository.FindByID(ctx, id, tx)
+
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 		if registration.LOValidation == "APPROVED" && approval.Status == "APPROVED" {
+// 			return errors.New("Registration already approved")
+// 		}
+
+// 		if registration.LOValidation == "REJECTED" && approval.Status == "REJECTED" {
+// 			return errors.New("Registration already rejected")
+// 		}
+
+// 		if approval.Status == "APPROVED" {
+// 			registration.LOValidation = "APPROVED"
+// 			if registration.AcademicAdvisorValidation == "APPROVED" {
+// 				registration.ApprovalStatus = true
+// 				res, err := s.monitoringManagementService.GetReportSchedulesByRegistrationID(registration.ID.String(), token)
+// 				if err != nil {
+// 					log.Println("ERROR GETTING REPORT SCHEDULES", err)
+// 					return err
+// 				}
+// 				if res == nil {
+// 					err = s.createReportSchedules(ctx, registration, token)
+// 					if err != nil {
+// 						return err
+// 					}
+// 				}
+// 			}
+// 		}
+// 		if approval.Status == "REJECTED" {
+// 			registration.LOValidation = "REJECTED"
+// 			// if registration.AcademicAdvisorValidation == "REJECTED" {
+// 			// }
+// 			registration.ApprovalStatus = false
+// 		}
+
+// 		err = s.registrationRepository.Update(ctx, id, registration, tx)
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 		// get mahasiswa data
+// 		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
+// 			"user_nrp": registration.UserNRP,
+// 		}, "POST", token)
+
+// 		if mahasiswaData != nil || len(mahasiswaData) != 0 {
+// 			userData := s.userManagementService.GetUserData("GET", token)
+
+// 			userEmail := userData["email"]
+// 			userName := userData["name"]
+// 			message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, "LO-MBKM")
+
+// 			mahasiswaEmail := mahasiswaData[0]["email"]
+
+// 			err = s.brokerService.SendNotification(map[string]interface{}{
+// 				"sender_name":    userName,
+// 				"sender_email":   userEmail,
+// 				"receiver_email": mahasiswaEmail,
+// 				"type":           "APPROVAL REGISTRATION",
+// 				"message":        message,
+// 			}, "POST", token)
+// 		}
+
+// 	}
+
+// 	return nil
+// }
+
 func (s *registrationService) LORegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
+	// Process all registrations in batch
 	for _, id := range approval.ID {
 		registration, err := s.registrationRepository.FindByID(ctx, id, tx)
-
 		if err != nil {
 			return err
 		}
 
+		// Validation logic (same as before)
 		if registration.LOValidation == "APPROVED" && approval.Status == "APPROVED" {
 			return errors.New("Registration already approved")
 		}
-
 		if registration.LOValidation == "REJECTED" && approval.Status == "REJECTED" {
 			return errors.New("Registration already rejected")
 		}
 
+		// Update database first (fast operation)
 		if approval.Status == "APPROVED" {
 			registration.LOValidation = "APPROVED"
 			if registration.AcademicAdvisorValidation == "APPROVED" {
 				registration.ApprovalStatus = true
-				// Create report schedules when both validations are approved
-				err = s.createReportSchedules(ctx, registration, token)
-				if err != nil {
-					return err
-				}
 			}
 		}
 		if approval.Status == "REJECTED" {
 			registration.LOValidation = "REJECTED"
-			// if registration.AcademicAdvisorValidation == "REJECTED" {
-			// }
 			registration.ApprovalStatus = false
 		}
 
+		// Update in database immediately
 		err = s.registrationRepository.Update(ctx, id, registration, tx)
 		if err != nil {
 			return err
 		}
 
-		// get mahasiswa data
-		mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
-			"user_nrp": registration.UserNRP,
-		}, "POST", token)
+		// ASYNC: Handle heavy operations in background
+		go s.handlePostApprovalTasks(ctx, registration, token, approval.Status)
+	}
+	return nil
+}
 
-		if mahasiswaData != nil || len(mahasiswaData) != 0 {
-			userData := s.userManagementService.GetUserData("GET", token)
+func (s *registrationService) handlePostApprovalTasks(ctx context.Context, registration entity.Registration, token string, status string) {
+	// Add timeout untuk prevent hanging
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
-			userEmail := userData["email"]
-			userName := userData["name"]
-			message := fmt.Sprintf("%s has been approved or rejected by %s", registration.ActivityName, "LO-MBKM")
-
-			mahasiswaEmail := mahasiswaData[0]["email"]
-
-			err = s.brokerService.SendNotification(map[string]interface{}{
-				"sender_name":    userName,
-				"sender_email":   userEmail,
-				"receiver_email": mahasiswaEmail,
-				"type":           "APPROVAL REGISTRATION",
-				"message":        message,
-			}, "POST", token)
+	// Only create report schedules if needed
+	if status == "APPROVED" && registration.ApprovalStatus {
+		// Check if report schedules already exist
+		res, err := s.monitoringManagementService.GetReportSchedulesByRegistrationID(registration.ID.String(), token)
+		if err != nil {
+			log.Printf("ERROR GETTING REPORT SCHEDULES for %s: %v", registration.ID.String(), err)
+			return // Don't fail the main flow
 		}
 
+		if res == nil {
+			err = s.createReportSchedules(ctx, registration, token)
+			if err != nil {
+				log.Printf("ERROR CREATING REPORT SCHEDULES for %s: %v", registration.ID.String(), err)
+				return // Don't fail the main flow
+			}
+		}
 	}
 
-	return nil
+	// Send notification asynchronously
+	s.sendApprovalNotification(ctx, registration, token, status)
+}
+
+func (s *registrationService) sendApprovalNotification(ctx context.Context, registration entity.Registration, token string, status string) {
+	// Get user data with timeout
+	mahasiswaData := s.userManagementService.GetUserByFilter(map[string]interface{}{
+		"user_nrp": registration.UserNRP,
+	}, "POST", token)
+
+	if mahasiswaData == nil || len(mahasiswaData) == 0 {
+		log.Printf("No user data found for NRP: %s", registration.UserNRP)
+		return
+	}
+
+	userData := s.userManagementService.GetUserData("GET", token)
+	if userData == nil {
+		log.Printf("No user data from token")
+		return
+	}
+
+	userEmail := userData["email"]
+	userName := userData["name"]
+	statusText := "approved"
+	if status == "REJECTED" {
+		statusText = "rejected"
+	}
+
+	message := fmt.Sprintf("%s has been %s by LO-MBKM", registration.ActivityName, statusText)
+	mahasiswaEmail := mahasiswaData[0]["email"]
+
+	s.brokerService.SendNotification(map[string]interface{}{
+		"sender_name":    userName,
+		"sender_email":   userEmail,
+		"receiver_email": mahasiswaEmail,
+		"type":           "APPROVAL REGISTRATION",
+		"message":        message,
+	}, "POST", token)
+
+	// if err != nil {
+	// 	log.Printf("ERROR SENDING NOTIFICATION for %s: %v", registration.ID.String(), err)
+	// 	// Don't fail, just log
+	// }
 }
 
 func (s *registrationService) AdvisorRegistrationApproval(ctx context.Context, token string, approval dto.ApprovalRequest, tx *gorm.DB) error {
